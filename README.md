@@ -152,7 +152,11 @@ Interested in frontend development, thoughtful UI, or learning through building?
 ## Contribution Journey
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ukaninirmik65-hash/ukaninirmik65-hash/output/github-snake.svg" alt="GitHub contribution snake animation" width="100%" />
+  <img
+    src="https://raw.githubusercontent.com/ukaninirmik65-hash/ukaninirmik65-hash/output/github-snake-dark.svg"
+    alt="Dark contribution snake animation"
+    width="100%"
+  />
 </p>
 
 ---
