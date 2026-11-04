@@ -9,6 +9,9 @@
   <a href="https://readme-typing-svg.demolab.com">
     <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=22&duration=2800&pause=900&color=22D3EE&center=true&vCenter=true&width=760&lines=Frontend+Developer;JavaScript+Developer;React.js+Developer;UI+Developer;Building+Modern+Web+Experiences;Learning+TypeScript+%26+Next.js;Available+for+Freelance+Projects" alt="Animated typing text rotating through Nirmik Ukani's developer roles and focus areas" />
   </a>
+  <a href="https://nirmik-portfolio.vercel.app/" target="_blank" rel="noopener noreferrer">
+  Visit My Portfolio
+</a>
 </p>
 
 <p align="center">
