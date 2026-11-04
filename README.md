@@ -3,6 +3,13 @@
 </p>
 
 <h1 align="center">Nirmik Ukani</h1>
+
+
+<p align="center">
+  <a href="https://readme-typing-svg.demolab.com">
+    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=22&duration=2800&pause=900&color=22D3EE&center=true&vCenter=true&width=760&lines=Frontend+Developer;JavaScript+Developer;React.js+Developer;UI+Developer;Building+Modern+Web+Experiences;Learning+TypeScript+%26+Next.js;Available+for+Freelance+Projects" alt="Animated typing text rotating through Nirmik Ukani's developer roles and focus areas" />
+  </a>
+</p>
 <a
   href="https://nirmik-portfolio.vercel.app/"
   target="_blank"
@@ -10,13 +17,6 @@
 >
   Portfolio
 </a>
-
-<p align="center">
-  <a href="https://readme-typing-svg.demolab.com">
-    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=22&duration=2800&pause=900&color=22D3EE&center=true&vCenter=true&width=760&lines=Frontend+Developer;JavaScript+Developer;React.js+Developer;UI+Developer;Building+Modern+Web+Experiences;Learning+TypeScript+%26+Next.js;Available+for+Freelance+Projects" alt="Animated typing text rotating through Nirmik Ukani's developer roles and focus areas" />
-  </a>
-</p>
-
 <p align="center">
   <a href="#about-me">About</a>&nbsp;&nbsp;•&nbsp;&nbsp;
   <a href="#tech-stack">Skills</a>&nbsp;&nbsp;•&nbsp;&nbsp;
