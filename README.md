@@ -13,11 +13,10 @@
 </p>
 
 <p align="center">
-<p align="center">
+
   <a href="https://nirmik-portfolio.vercel.app/" target="_blank" rel="noopener noreferrer">
     <img src="https://img.shields.io/badge/🚀_VISIT_MY_PORTFOLIO-22D3EE?style=for-the-badge&logo=vercel&logoColor=0B1120&labelColor=0B1120" alt="Visit My Portfolio" />
   </a>
-</p>
   <a href="#about-me">About</a>&nbsp;&nbsp;•&nbsp;&nbsp;
   <a href="#tech-stack">Skills</a>&nbsp;&nbsp;•&nbsp;&nbsp;
   <a href="#featured-projects">Projects</a>&nbsp;&nbsp;•&nbsp;&nbsp;
