@@ -26,7 +26,6 @@
   <a href="https://nirmik-portfolio.vercel.app/" target="_blank" rel="noopener noreferrer">
     <img src="https://img.shields.io/badge/VISIT_MY_PORTFOLIO-22D3EE?style=for-the-badge&logo=vercel&logoColor=0B1120&labelColor=0B1120" alt="Visit My Portfolio" />
   </a>
-  <img src="https://komarev.com/ghpvc/?username=ukaninirmik65-hash&style=for-the-badge&color=22D3EE&label=PROFILE+VIEWS" alt="Dynamic profile view counter" />
 
 </p>
 
