@@ -3,6 +3,13 @@
 </p>
 
 <h1 align="center">Nirmik Ukani</h1>
+<a
+  href="https://nirmik-portfolio.vercel.app/"
+  target="_blank"
+  rel="noopener noreferrer"
+>
+  Portfolio
+</a>
 
 <p align="center">
   <a href="https://readme-typing-svg.demolab.com">
