@@ -21,13 +21,13 @@
   <a href="#github-activity">GitHub Stats</a>&nbsp;&nbsp;•&nbsp;&nbsp;
   <a href="#contact">Contact</a>
 </p>
-  <a align="center" href="https://nirmik-portfolio.vercel.app/" target="_blank" rel="noopener noreferrer">
-  Visit My Portfolio
-</a>
 <p align="center">
   <img src="https://komarev.com/ghpvc/?username=ukaninirmik65-hash&style=for-the-badge&color=22D3EE&label=PROFILE+VIEWS" alt="Dynamic profile view counter" />
+  
 </p>
-
+ <a href="https://nirmik-portfolio.vercel.app/" target="_blank" rel="noopener noreferrer">
+    <img src="https://img.shields.io/badge/🚀_VISIT_MY_PORTFOLIO-22D3EE?style=for-the-badge&logo=vercel&logoColor=0B1120&labelColor=0B1120" alt="Visit My Portfolio" />
+  </a>
 <p align="center">
   <em>Building thoughtful interfaces with clean code, useful motion, and a strong focus on the user.</em>
 </p>
