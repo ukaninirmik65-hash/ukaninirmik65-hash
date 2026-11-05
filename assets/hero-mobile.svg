@@ -1,0 +1,49 @@
+
+      <svg
+        width="854"
+        height="240"
+        xmlns="http://www.w3.org/2000/svg"
+        xmlns:xlink="http://www.w3.org/1999/xlink"
+        style="z-index:1;position:relative"
+        viewBox="0 0 854 240"
+      >
+        <style>
+      .text {   font-size: 54px;   font-weight: 700;   font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji;  } .desc {   font-size: 32px;   font-weight: 500;   font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji;  } 
+      .text, .desc {   animation: twinkling 4s ease-in-out infinite;  } @keyframes twinkling {   40% {     opacity: 1;   }   50% {     opacity: 0.5;   }   60% {     opacity: 1;   }   70% {     opacity: 0.5;   }   80% {     opacity: 1;   }  } 
+    </style>
+        <defs>
+              <linearGradient id="linear" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#12334D"/><stop offset="50%" stop-color="#172139"/><stop offset="100%" stop-color="#514479"/>
+              </linearGradient>
+            </defs>
+        
+      <g transform="translate(427, 120) scale(1, 1) translate(-427, -120)">
+        <path d="" fill="url(#linear)" opacity="0.4" >
+          <animate
+              attributeName="d"
+              dur="20s"
+              repeatCount="indefinite"
+              keyTimes="0;0.333;0.667;1"
+              calcmod="spline"
+              keySplines="0.2 0 0.2 1;0.2 0 0.2 1;0.2 0 0.2 1"
+              begin="0s"
+              values="M0 0L 0 160Q 213.5 200 427 170T 854 195L 854 0 Z;M0 0L 0 185Q 213.5 200 427 180T 854 170L 854 0 Z;M0 0L 0 205Q 213.5 175 427 205T 854 170L 854 0 Z;M0 0L 0 160Q 213.5 200 427 170T 854 195L 854 0 Z">
+          </animate>
+        </path>
+        <path d="" fill="url(#linear)" opacity="0.4" >
+          <animate
+            attributeName="d"
+            dur="20s"
+            repeatCount="indefinite"
+            keyTimes="0;0.333;0.667;1"
+            calcmod="spline"
+            keySplines="0.2 0 0.2 1;0.2 0 0.2 1;0.2 0 0.2 1"
+            begin="-10s"
+            values="M0 0L 0 175Q 213.5 220 427 190T 854 200L 854 0 Z;M0 0L 0 190Q 213.5 160 427 160T 854 180L 854 0 Z;M0 0L 0 185Q 213.5 165 427 190T 854 205L 854 0 Z;M0 0L 0 175Q 213.5 220 427 190T 854 200L 854 0 Z">
+          </animate>
+        </path>
+      </g>
+         <text text-anchor="middle" dominant-baseline="middle" x="50%" y="37%" class="text" style="fill:#F8FAFC;" stroke="#none" stroke-width="1" >NIRMIK UKANI</text>
+        <text text-anchor="middle" dominant-baseline="middle" x="50%" y="59%" class="desc" style="fill:#F8FAFC;">Frontend Developer | React.js Developer</text>
+      </svg>
+    

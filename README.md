@@ -1,6 +1,12 @@
 <p align="center">
-  <img src="assets/hero.svg" width="100%" alt="NIRMIK UKANI — Frontend Developer | React.js Developer. Animated navy, cyan and purple Capsule Render header." />
-  <img src="assets/typing.svg" width="620" alt="Frontend Developer · JavaScript Developer · React.js Developer · UI Developer · Responsive Web Designer · Building Modern Web Experiences" />
+  <picture>
+    <source media="(max-width: 600px)" srcset="assets/hero-mobile.svg" />
+    <img src="assets/hero.svg" width="100%" alt="NIRMIK UKANI — Frontend Developer | React.js Developer. Animated navy, cyan and purple Capsule Render header." />
+  </picture>
+  <picture>
+    <source media="(max-width: 600px)" srcset="assets/typing-mobile.svg" />
+    <img src="assets/typing.svg" width="620" alt="Frontend Developer · JavaScript Developer · React.js Developer · UI Developer · Responsive Web Designer · Building Modern Web Experiences" />
+  </picture>
 </p>
 
 <p align="center">
