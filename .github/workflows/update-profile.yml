@@ -59,9 +59,12 @@ jobs:
         run: |
           set -euo pipefail
           git add -- \
+            README.md \
             assets/profile-data.json \
-            assets/github-activity.svg \
-            assets/github-activity-mobile.svg \
+            assets/latest-repositories.svg \
+            assets/latest-repositories-mobile.svg \
+            assets/github-statistics.svg \
+            assets/github-statistics-mobile.svg \
             assets/contribution-graph.svg \
             assets/contribution-graph-mobile.svg \
             assets/github-languages.svg \

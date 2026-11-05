@@ -60,15 +60,17 @@ The updater owns only these files:
 
 ```text
 assets/profile-data.json
-assets/github-activity.svg
-assets/github-activity-mobile.svg
+assets/latest-repositories.svg
+assets/latest-repositories-mobile.svg
+assets/github-statistics.svg
+assets/github-statistics-mobile.svg
 assets/contribution-graph.svg
 assets/contribution-graph-mobile.svg
 assets/github-languages.svg
 assets/github-languages-mobile.svg
 ```
 
-Desktop and mobile variants use the same underlying data. The README's `<picture>` elements select the appropriate variant. The JSON snapshot stores sanitized public data so that the source and calculations can be reviewed. It contains no credentials.
+The updater also refreshes the `LATEST_REPOSITORIES` block in `README.md`, so every displayed repository has a direct GitHub link. Desktop and mobile variants use the same underlying data. The README's `<picture>` elements select the appropriate variant. The JSON snapshot stores sanitized public data so that the source and calculations can be reviewed. It contains no credentials.
 
 The workflow stages only this allowlist. Deterministic rendering and change detection avoid commits caused solely by a new run time. A new contribution date, changed public count, or changed repository data can legitimately produce a commit.
 

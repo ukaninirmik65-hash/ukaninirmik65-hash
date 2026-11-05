@@ -12,6 +12,7 @@ import {
   calculateStreaks,
   buildModel,
   renderAssets,
+  renderLatestRepositoryLinks,
   updateProfile,
 } from '../scripts/update-profile.mjs';
 
@@ -190,14 +191,26 @@ test('unchanged API data retains its observation date and produces byte-identica
 test('SVGs escape API strings and provide accessible titles without active content', () => {
   const model = sampleModel({ repositories: [{ ...repository, name: 'ui<&"' }] });
   const outputs = renderAssets(model);
-  assert.equal(Object.keys(outputs).length, 6);
-  assert.match(outputs['github-activity.svg'], /ui&lt;&amp;&quot;/);
+  assert.equal(Object.keys(outputs).length, 8);
+  assert.match(outputs['latest-repositories.svg'], /ui&lt;&amp;&quot;/);
   for (const content of Object.values(outputs)) {
     assert.match(content, /<title[^>]*>[^<]+<\/title>/);
     assert.match(content, /role="img"/);
     assert.doesNotMatch(content, /<script|<foreignObject|onload\s*=/i);
     assert.doesNotMatch(content, /NaN|Infinity|undefined/);
   }
+});
+
+test('latest repository output prioritizes original project repositories and provides direct GitHub links', () => {
+  const model = sampleModel({ repositories: [
+    { ...repository, name: 'profile-owner', pushed_at: '2026-01-03T00:00:00Z' },
+    { ...repository, id: 2, name: 'project-one', description: 'A recent frontend project', pushed_at: '2026-01-02T00:00:00Z' },
+    { ...repository, id: 3, name: 'forked-project', fork: true, pushed_at: '2026-01-04T00:00:00Z' },
+  ], user: { login: 'profile-owner', followers: 4 } });
+  const links = renderLatestRepositoryLinks(model);
+  assert.match(links, /\[\*\*project-one\*\*\]\(https:\/\/github\.com\/profile-owner\/project-one\)/);
+  assert.doesNotMatch(links, /profile-owner\*\*\]|forked-project/);
+  assert.match(renderAssets(model)['latest-repositories.svg'], /A recent frontend project/);
 });
 
 test('pagination rejects an off-site next link before making a second request', async () => {
@@ -290,9 +303,11 @@ function publicRequest({ optionalFailure = false, authenticatedCountsDiffer = fa
 
 test('repeating a successful refresh makes no new file changes', async () => {
   const root = await mkdtemp(join(tmpdir(), 'profile-determinism-'));
+  await writeFile(join(root, 'README.md'), '## Latest Repository Updates\n\n<!-- LATEST_REPOSITORIES:START -->\n<!-- LATEST_REPOSITORIES:END -->\n');
   const options = { username: 'example', root, today: '2026-01-03', request: publicRequest() };
   const first = await updateProfile(options);
-  assert.equal(first.changed, 7);
+  assert.equal(first.changed, 10);
+  assert.match(await readFile(join(root, 'README.md'), 'utf8'), /\[\*\*interface\*\*\]\(https:\/\/github\.com\/example\/interface\)/);
   const second = await updateProfile(options);
   assert.equal(second.changed, 0);
   assert.deepEqual(second.model, first.model);

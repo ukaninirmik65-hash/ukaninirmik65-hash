@@ -175,7 +175,17 @@ export function buildModel({ user, repositories, languages, contributions, previ
   const publicRepos = repositories.filter(repo => !repo.private).sort((a, b) => a.name.localeCompare(b.name));
   const repos = publicRepos.map(repo => {
     if (![repo.stargazers_count, repo.forks_count].every(integer)) throw new Error('Invalid repository totals');
-    return { name: repo.name, stars: repo.stargazers_count, forks: repo.forks_count, fork: repo.fork, archived: repo.archived, pushedAt: repo.pushed_at?.slice(0, 10) || null, language: repo.language || null };
+    return {
+      name: repo.name,
+      description: typeof repo.description === 'string' ? repo.description : null,
+      url: `https://github.com/${user.login}/${encodeURIComponent(repo.name)}`,
+      stars: repo.stargazers_count,
+      forks: repo.forks_count,
+      fork: repo.fork,
+      archived: repo.archived,
+      pushedAt: repo.pushed_at?.slice(0, 10) || null,
+      language: repo.language || null,
+    };
   });
   const snapshot = { username: user.login, followers: user.followers, repositories: repos, totals: summarizeRepositories(publicRepos) };
   const previousSnapshot = previous && Object.fromEntries(Object.keys(snapshot).map(key => [key, previous[key]]));
@@ -214,7 +224,36 @@ function bars(series, x, y, width, height, labelEvery = 1) {
   }).join('') + line(x, y + height + 1, x + width, y + height + 1);
 }
 
-function dashboard(model, mobile = false) {
+function latestRepositories(model, mobile = false) {
+  const width = mobile ? 420 : 900;
+  const repos = [...model.repositories]
+    .filter(repo => !repo.fork && !repo.archived && repo.name.toLowerCase() !== model.username.toLowerCase())
+    .sort((a, b) => (b.pushedAt || '').localeCompare(a.pushedAt || '') || a.name.localeCompare(b.name))
+    .slice(0, 6);
+  const columns = mobile ? 1 : 2;
+  const cardWidth = mobile ? 364 : 414;
+  const cardHeight = 128;
+  const height = 98 + Math.ceil(repos.length / columns) * (cardHeight + 14) + 26;
+  let c = txt(28, 38, 'Latest repository updates', 'title') + txt(28, 62, `Recently updated original public repositories · snapshot ${model.observedAt}`, 'label');
+  c += `<rect x="28" y="78" width="52" height="3" rx="1.5" fill="url(#accent)"/>`;
+  repos.forEach((repo, index) => {
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+    const x = mobile ? 28 : 28 + column * 430;
+    const y = 98 + row * (cardHeight + 14);
+    const name = repo.name.length > (mobile ? 31 : 33) ? `${repo.name.slice(0, mobile ? 29 : 31)}…` : repo.name;
+    const description = repo.description || 'No description provided.';
+    const shortDescription = description.length > (mobile ? 53 : 67) ? `${description.slice(0, mobile ? 51 : 65)}…` : description;
+    c += `<a href="${esc(repo.url)}"><rect x="${x}" y="${y}" width="${cardWidth}" height="${cardHeight}" rx="14" fill="#101B2E" stroke="${index % 2 ? '#A78BFA' : '#22D3EE'}" stroke-opacity=".62"/><rect x="${x}" y="${y}" width="5" height="${cardHeight}" rx="2.5" fill="${index % 2 ? '#A78BFA' : '#22D3EE'}"/><title>${esc(`${repo.name} · open repository`)}</title></a>`;
+    c += txt(x + 20, y + 30, name, 'value', 'font-size="17"') + txt(x + 20, y + 53, shortDescription, 'muted small');
+    c += txt(x + 20, y + 84, repo.language || 'Language not detected', 'cyan small') + txt(x + 156, y + 84, `★ ${num(repo.stars)}`, 'small') + txt(x + 214, y + 84, `⑂ ${num(repo.forks)}`, 'small');
+    c += txt(x + 20, y + 108, `Updated ${repo.pushedAt || 'date unavailable'}`, 'muted small') + txt(x + cardWidth - 18, y + 108, 'View ↗', index % 2 ? 'purple small' : 'cyan small', 'text-anchor="end"');
+  });
+  if (!repos.length) c += txt(28, 122, 'No original public repositories are available yet.', 'label');
+  return svg(width, height, 'Latest repository updates', 'Recently updated original public GitHub repositories showing descriptions, primary languages, stars, forks, and push dates. Repository links are also provided beneath this image in the profile README.', c);
+}
+
+function githubStatistics(model, mobile = false) {
   const width = mobile ? 420 : 900;
   const calendar = model.contributions;
   const metrics = [['Public repositories', model.totals.total], ['Stars received', model.totals.stars], ['Forks received', model.totals.forks], ['Followers', model.followers]];
@@ -222,35 +261,27 @@ function dashboard(model, mobile = false) {
   for (const [key, label] of [['commits', 'Public commits · YTD'], ['pullRequests', 'Pull requests · YTD'], ['issues', 'Issues · YTD'], ['reviews', 'Code reviews · YTD']]) {
     if (integer(calendar?.metrics?.[key])) metrics.push([label, calendar.metrics[key]]);
   }
-  const metricRows = Math.ceil(metrics.length / 2);
-  const chartY = mobile ? 98 + metricRows * 72 : 110;
-  const chartX = mobile ? 28 : 410;
-  const chartWidth = mobile ? 364 : 458;
-  const repoY = mobile ? chartY + 300 : Math.max(420, 110 + metricRows * 72);
-  const height = repoY + 170;
-  let c = txt(28, 38, 'Activity overview', 'title') + txt(28, 62, `@${model.username} · publicly visible activity`, 'label');
+  const columns = mobile ? 2 : 4;
+  const rows = Math.ceil(metrics.length / columns);
+  const height = 96 + rows * 78;
+  let c = txt(28, 38, 'GitHub statistics', 'title') + txt(28, 62, `Public account data · snapshot ${model.observedAt}`, 'label');
   c += `<rect x="28" y="78" width="42" height="3" rx="1.5" fill="url(#accent)"/>`;
   metrics.forEach(([label, value], index) => {
-    const x = 28 + (index % 2) * (mobile ? 184 : 180);
-    const y = 118 + Math.floor(index / 2) * 72;
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+    const x = 28 + column * (mobile ? 184 : 215);
+    const y = 118 + row * 78;
     c += txt(x, y, num(value), index === 4 ? 'value cyan' : 'value') + txt(x, y + 21, label, 'label');
   });
-  if (calendar) {
-    c += txt(chartX, chartY, `Monthly contributions · ${calendar.from.slice(0, 4)}`, 'label');
-    c += bars(monthSeries(calendar), chartX, chartY + 30, chartWidth, 85, mobile ? 2 : 1);
-    c += txt(chartX, chartY + 170, 'Weekly contributions · last 8 rolling weeks', 'label');
-    c += bars(weekSeries(calendar), chartX, chartY + 200, chartWidth, 55, mobile ? 2 : 1);
-  } else c += txt(chartX, chartY, 'Contribution API unavailable · metrics omitted', 'label');
-  c += line(28, repoY - 15, width - 28, repoY - 15) + txt(28, repoY + 8, 'Repository pulse', 'label');
-  const recent = [...model.repositories].filter(repo => repo.pushedAt).sort((a, b) => b.pushedAt.localeCompare(a.pushedAt) || a.name.localeCompare(b.name)).slice(0, 3);
-  recent.forEach((repo, index) => {
-    const y = repoY + 36 + index * 25;
-    const name = repo.name.length > (mobile ? 29 : 45) ? repo.name.slice(0, mobile ? 27 : 43) + '…' : repo.name;
-    c += txt(28, y, name, 'small') + txt(width - 28, y, `push ${repo.pushedAt}`, 'muted small', 'text-anchor="end"');
-  });
-  c += txt(28, height - 28, `${model.totals.originals} original repos · ${model.totals.active} non-archived · snapshot ${model.observedAt}`, 'muted small');
-  if (calendar) c += txt(28, height - 10, `Calendar ${calendar.from} → ${calendar.to} · public profile counts`, 'muted small');
-  return svg(width, height, 'Nirmik Ukani — GitHub activity overview', 'Real public repository totals, publicly visible contributions by month and week, and latest repository push dates. Weekly buckets end on the calendar snapshot date and are clipped to the calendar year; the current month is partial.', c);
+  return svg(width, height, 'GitHub statistics', 'Public repositories, received stars and forks, followers, and available public contribution metrics. These numbers are generated from GitHub data.', c);
+}
+
+export function renderLatestRepositoryLinks(model) {
+  const repos = [...model.repositories]
+    .filter(repo => !repo.fork && !repo.archived && repo.name.toLowerCase() !== model.username.toLowerCase())
+    .sort((a, b) => (b.pushedAt || '').localeCompare(a.pushedAt || '') || a.name.localeCompare(b.name))
+    .slice(0, 6);
+  return repos.map(repo => `- [**${repo.name}**](${repo.url}) · ${repo.language || 'Language not detected'} · ★ ${repo.stars} · forks ${repo.forks} · updated ${repo.pushedAt || 'date unavailable'}`).join('\n');
 }
 
 function graph(model, mobile = false) {
@@ -331,8 +362,10 @@ function languageCard(model, mobile = false) {
 
 export function renderAssets(model) {
   return {
-    'github-activity.svg': dashboard(model),
-    'github-activity-mobile.svg': dashboard(model, true),
+    'latest-repositories.svg': latestRepositories(model),
+    'latest-repositories-mobile.svg': latestRepositories(model, true),
+    'github-statistics.svg': githubStatistics(model),
+    'github-statistics-mobile.svg': githubStatistics(model, true),
     'contribution-graph.svg': graph(model),
     'contribution-graph-mobile.svg': graph(model, true),
     'github-languages.svg': languageCard(model),
@@ -351,6 +384,19 @@ async function writeChanged(filename, content) {
   await writeFile(temporary, content, 'utf8');
   await rename(temporary, filename);
   return true;
+}
+
+async function updateLatestRepositoryLinks(root, model) {
+  const filename = path.join(root, 'README.md');
+  let readme;
+  try { readme = await readFile(filename, 'utf8'); } catch (error) { if (error.code === 'ENOENT') return false; throw error; }
+  const start = '<!-- LATEST_REPOSITORIES:START -->';
+  const end = '<!-- LATEST_REPOSITORIES:END -->';
+  const begin = readme.indexOf(start);
+  const finish = readme.indexOf(end);
+  if (begin === -1 || finish === -1 || finish <= begin) throw new Error('Latest repository markers are missing from README');
+  const replacement = `${start}\n${renderLatestRepositoryLinks(model)}\n${end}`;
+  return writeChanged(filename, readme.slice(0, begin) + replacement + readme.slice(finish + end.length));
 }
 
 export async function updateProfile({ username = DEFAULT_USER, root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'), today = dateKey(new Date()), token, request } = {}) {
@@ -395,6 +441,7 @@ export async function updateProfile({ username = DEFAULT_USER, root = path.resol
   await mkdir(assetDir, { recursive: true });
   let changed = 0;
   for (const [filename, content] of Object.entries(outputs)) if (await writeChanged(path.join(assetDir, filename), content)) changed++;
+  if (await updateLatestRepositoryLinks(root, model)) changed++;
   console.log(`Public profile refreshed: ${repositories.length} repositories; ${changed} changed assets.`);
   return { model, changed };
 }

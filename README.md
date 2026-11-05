@@ -14,6 +14,7 @@
   <a href="#tech-stack">Tech Stack</a> &nbsp;·&nbsp;
   <a href="#projects">Projects</a> &nbsp;·&nbsp;
   <a href="#experience">Experience</a> &nbsp;·&nbsp;
+  <a href="#latest-repository-updates">Latest Updates</a> &nbsp;·&nbsp;
   <a href="#github-activity">GitHub Activity</a> &nbsp;·&nbsp;
   <a href="#freelance-services">Freelance Services</a> &nbsp;·&nbsp;
   <a href="#contact">Contact</a>
@@ -99,13 +100,31 @@ Selected work across application interfaces, browser interaction, and responsive
 **Frontend Development — 1+ Year**  
 Hands-on project development using React.js, JavaScript, and responsive web design. My work spans UI implementation, component-based architecture, interactive browser features, and refining layouts across screen sizes.
 
-## GitHub Activity
+## Latest Repository Updates
 
-Public repository totals and a year-to-date activity view, generated from GitHub data. Open a chart for its full-size view.
+Recently updated original public repositories, generated from GitHub's API. Every repository below links directly to its source.
 
 <picture>
-  <source media="(max-width: 600px)" srcset="assets/github-activity-mobile.svg" />
-  <img src="assets/github-activity.svg" width="100%" alt="Live-generated activity overview: public repositories, received stars and forks, followers, available contribution metrics, monthly and weekly activity, and repository push dates." />
+  <source media="(max-width: 600px)" srcset="assets/latest-repositories-mobile.svg" />
+  <img src="assets/latest-repositories.svg" width="100%" alt="Latest public repository updates with names, descriptions, primary languages, stars, forks, and updated dates." />
+</picture>
+
+<!-- LATEST_REPOSITORIES:START -->
+- [**nirmik-portfolio**](https://github.com/ukaninirmik65-hash/nirmik-portfolio) · JavaScript · ★ 0 · forks 0 · updated 2026-11-05
+- [**atakKriya-2.O**](https://github.com/ukaninirmik65-hash/atakKriya-2.O) · JavaScript · ★ 0 · forks 0 · updated 2026-10-08
+- [**ERP-App**](https://github.com/ukaninirmik65-hash/ERP-App) · JavaScript · ★ 0 · forks 0 · updated 2026-09-23
+- [**Neelmadhav-Public-School**](https://github.com/ukaninirmik65-hash/Neelmadhav-Public-School) · JavaScript · ★ 0 · forks 0 · updated 2026-08-29
+- [**Anitajewellerys**](https://github.com/ukaninirmik65-hash/Anitajewellerys) · CSS · ★ 0 · forks 0 · updated 2026-05-20
+- [**motiwalaperfumes-clone**](https://github.com/ukaninirmik65-hash/motiwalaperfumes-clone) · HTML · ★ 0 · forks 0 · updated 2026-04-15
+<!-- LATEST_REPOSITORIES:END -->
+
+## GitHub Activity
+
+Public GitHub statistics, contribution calendar, language composition, and streaks. All values refresh from GitHub data.
+
+<picture>
+  <source media="(max-width: 600px)" srcset="assets/github-statistics-mobile.svg" />
+  <img src="assets/github-statistics.svg" width="100%" alt="Live-generated GitHub statistics for public repositories, stars, forks, followers, and available public contribution metrics." />
 </picture>
 
 <picture>
@@ -121,9 +140,9 @@ Public repository totals and a year-to-date activity view, generated from GitHub
 <details>
   <summary>Data sources and refresh details</summary>
 
-Charts refresh daily and on supported repository events, with manual updates available in Actions. Repository totals include this profile repository; language shares use code bytes, not proficiency. Contribution counts follow GitHub's calendar rules and show the date window and source on each chart. A contribution streak counts consecutive active days within that window.
+Charts refresh daily and on supported repository events, with manual updates available in Actions. The Latest Repository Updates section prioritizes recently pushed original public repositories and excludes this profile repository, so automation commits do not displace project work. Repository totals include this profile repository; language shares use code bytes, not proficiency. Contribution counts follow GitHub's calendar rules and show the date window and source on each chart. A contribution streak counts consecutive active days within that window.
 
-GitHub's native profile calendar is authoritative. This dashboard does not claim access to private contributions. If an API is temporarily unavailable, the last successful chart stays visible with its original data date. [Setup and metric definitions](docs/SETUP.md) · [Verified project details](docs/PROJECT-VERIFICATION.md)
+GitHub's native profile calendar is authoritative. This profile does not claim access to private contributions. If an API is temporarily unavailable, the last successful chart stays visible with its original data date. [Setup and metric definitions](docs/SETUP.md) · [Verified project details](docs/PROJECT-VERIFICATION.md)
 
 </details>
 

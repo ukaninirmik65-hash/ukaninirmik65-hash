@@ -5,6 +5,8 @@
   "repositories": [
     {
       "name": "Anitajewellerys",
+      "description": null,
+      "url": "https://github.com/ukaninirmik65-hash/Anitajewellerys",
       "stars": 0,
       "forks": 0,
       "fork": false,
@@ -14,6 +16,8 @@
     },
     {
       "name": "atakKriya-2.O",
+      "description": null,
+      "url": "https://github.com/ukaninirmik65-hash/atakKriya-2.O",
       "stars": 0,
       "forks": 0,
       "fork": false,
@@ -23,6 +27,8 @@
     },
     {
       "name": "demo",
+      "description": null,
+      "url": "https://github.com/ukaninirmik65-hash/demo",
       "stars": 0,
       "forks": 0,
       "fork": false,
@@ -32,6 +38,8 @@
     },
     {
       "name": "ERP-App",
+      "description": null,
+      "url": "https://github.com/ukaninirmik65-hash/ERP-App",
       "stars": 0,
       "forks": 0,
       "fork": false,
@@ -41,6 +49,8 @@
     },
     {
       "name": "motiwalaperfumes-clone",
+      "description": null,
+      "url": "https://github.com/ukaninirmik65-hash/motiwalaperfumes-clone",
       "stars": 0,
       "forks": 0,
       "fork": false,
@@ -50,6 +60,8 @@
     },
     {
       "name": "Neelmadhav-Public-School",
+      "description": null,
+      "url": "https://github.com/ukaninirmik65-hash/Neelmadhav-Public-School",
       "stars": 0,
       "forks": 0,
       "fork": false,
@@ -59,6 +71,8 @@
     },
     {
       "name": "nirmik-portfolio",
+      "description": "Nirmik Ukani — responsive React frontend developer portfolio, project showcase, and Web3Forms inquiries.",
+      "url": "https://github.com/ukaninirmik65-hash/nirmik-portfolio",
       "stars": 0,
       "forks": 0,
       "fork": false,
@@ -68,6 +82,8 @@
     },
     {
       "name": "Tetris-Game",
+      "description": null,
+      "url": "https://github.com/ukaninirmik65-hash/Tetris-Game",
       "stars": 1,
       "forks": 0,
       "fork": false,
@@ -77,6 +93,8 @@
     },
     {
       "name": "ukaninirmik65-hash",
+      "description": null,
+      "url": "https://github.com/ukaninirmik65-hash/ukaninirmik65-hash",
       "stars": 0,
       "forks": 0,
       "fork": false,
@@ -1341,15 +1359,9 @@
       },
       {
         "date": "2026-11-05",
-        "count": 3
+        "count": 5
       }
     ],
-    "total": 96,
-    "metrics": {
-      "commits": 71,
-      "pullRequests": 1,
-      "issues": 0,
-      "reviews": 0
-    }
+    "total": 98
   }
 }
