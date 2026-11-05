@@ -41,7 +41,7 @@ The caller needs permission to dispatch to this repository. Keep that credential
 - Monthly and weekly charts aggregate those same daily counts. The current month and week can be incomplete. Repository activity is labeled using repository push dates; it is not a count of commits.
 - Contribution-type counts are shown only when the API can reliably establish their public scope. An unavailable metric is omitted rather than replaced with zero.
 - A contribution streak means consecutive calendar days with at least one contribution. Today's zero does not break a streak that was active yesterday. The longest streak is limited to the displayed calendar year.
-- The source and data dates are embedded in generated assets. If optional data cannot be refreshed, retained data keeps its original date and is identified as retained. A failed required REST fetch leaves the last successful assets intact and fails the workflow.
+- The source and data dates are embedded in generated assets. If optional data cannot be refreshed, retained data keeps its original date so its age remains visible. A failed required REST fetch leaves the last successful assets intact and fails the workflow.
 
 ## Local commands
 
