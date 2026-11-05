@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="250" height="52" viewBox="0 0 250 52" role="img" aria-labelledby="title">
+  <title id="title">Visit My Portfolio</title>
+  <defs><linearGradient id="accent"><stop stop-color="#22D3EE"/><stop offset="1" stop-color="#A78BFA"/></linearGradient></defs>
+  <rect x="1" y="1" width="248" height="50" rx="12" fill="#0B1120" stroke="url(#accent)" stroke-width="2"/>
+  <text x="125" y="32" fill="#F8FAFC" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="15" font-weight="600">Visit My Portfolio <tspan fill="#22D3EE">↗</tspan></text>
+</svg>

@@ -1,0 +1,87 @@
+name: Update profile activity
+
+on:
+  schedule:
+    - cron: '23 3 * * *'
+  workflow_dispatch:
+  repository_dispatch:
+    types: [profile-update]
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/**'
+      - 'tests/**'
+      - 'package.json'
+      - '.github/workflows/update-profile.yml'
+  watch:
+    types: [started]
+  fork:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: profile-activity-update
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: github.repository == 'ukaninirmik65-hash/ukaninirmik65-hash'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the profile branch
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+
+      - name: Test the data pipeline
+        run: npm test
+
+      - name: Fetch public activity and render SVGs
+        env:
+          GITHUB_TOKEN: ${{ secrets.PROFILE_TOKEN || github.token }}
+        run: npm run update
+
+      - name: Commit changed generated assets
+        env:
+          GH_PUSH_TOKEN: ${{ github.token }}
+          PROFILE_BRANCH: ${{ github.event.repository.default_branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -- \
+            assets/profile-data.json \
+            assets/github-activity.svg \
+            assets/github-activity-mobile.svg \
+            assets/contribution-graph.svg \
+            assets/contribution-graph-mobile.svg \
+            assets/github-languages.svg \
+            assets/github-languages-mobile.svg
+          if git diff --cached --quiet; then
+            echo "Public data is unchanged; no commit needed."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore: refresh public profile activity'
+          askpass="$(mktemp "${RUNNER_TEMP}/profile-askpass.XXXXXX")"
+          trap 'rm -f "$askpass"' EXIT
+          cat > "$askpass" <<'ASKPASS'
+          #!/usr/bin/env bash
+          case "$1" in
+            *Username*) printf '%s\n' 'x-access-token' ;;
+            *Password*) printf '%s\n' "$GH_PUSH_TOKEN" ;;
+          esac
+          ASKPASS
+          chmod 700 "$askpass"
+          GIT_ASKPASS="$askpass" GIT_TERMINAL_PROMPT=0 \
+            git push origin "HEAD:refs/heads/${PROFILE_BRANCH}"
