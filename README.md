@@ -110,7 +110,7 @@ Recently updated original public repositories, generated from GitHub's API. Ever
 </picture>
 
 <!-- LATEST_REPOSITORIES:START -->
-- [**nirmik-portfolio**](https://github.com/ukaninirmik65-hash/nirmik-portfolio) · JavaScript · ★ 0 · forks 0 · updated 2026-11-05
+- [**nirmik-portfolio**](https://github.com/ukaninirmik65-hash/nirmik-portfolio) · JavaScript · ★ 0 · forks 0 · updated 2026-11-17
 - [**atakKriya-2.O**](https://github.com/ukaninirmik65-hash/atakKriya-2.O) · JavaScript · ★ 0 · forks 0 · updated 2026-10-08
 - [**ERP-App**](https://github.com/ukaninirmik65-hash/ERP-App) · JavaScript · ★ 0 · forks 0 · updated 2026-09-23
 - [**Neelmadhav-Public-School**](https://github.com/ukaninirmik65-hash/Neelmadhav-Public-School) · JavaScript · ★ 0 · forks 0 · updated 2026-08-29
