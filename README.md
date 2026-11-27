@@ -1,167 +1,178 @@
-<p align="center">
-  <picture>
-    <source media="(max-width: 600px)" srcset="assets/hero-mobile.svg" />
-    <img src="assets/hero.svg" width="100%" alt="NIRMIK UKANI — Frontend Developer | React.js Developer. Animated navy, cyan and purple Capsule Render header." />
-  </picture>
-  <picture>
-    <source media="(max-width: 600px)" srcset="assets/typing-mobile.svg" />
-    <img src="assets/typing.svg" width="620" alt="Frontend Developer · JavaScript Developer · React.js Developer · UI Developer · Responsive Web Designer · Building Modern Web Experiences" />
-  </picture>
+# Nirmik Ukani
+
+**Frontend Developer · React.js Developer**
+
+I build responsive, accessible web interfaces with React.js and JavaScript.
+
+[Portfolio](https://nirmik-portfolio.vercel.app/) · [LinkedIn](https://www.linkedin.com/in/nirmik-ukani-a14a3334b/) · [Contact on Freelancer](https://www.freelancer.in/u/nirmikukani)
+
+## About Me
+
+I turn UI designs into reusable components with attention to accessibility, performance, and maintainable code. I'm deepening my React knowledge, learning TypeScript and Next.js, and improving how I structure frontend applications.
+
+## Technology Stack
+
+<p>
+  <strong>Programming languages</strong> · JavaScript<br />
+  <strong>Frontend development</strong> · HTML5, CSS3, React.js<br />
+  <img src="assets/skills-frontend.svg" width="126" alt="" />
+</p>
+<p>
+  <strong>Styling</strong> · Bootstrap, Tailwind CSS<br />
+  <img src="assets/skills-styling.svg" width="60" alt="" />
+</p>
+<p>
+  <strong>Development tools</strong> · Git, GitHub, VS Code, Vite<br />
+  <img src="assets/skills-tools.svg" width="126" alt="" />
+</p>
+<p>
+  <strong>Currently learning</strong> · TypeScript, Next.js<br />
+  <img src="assets/skills-learning.svg" width="60" alt="" />
 </p>
 
-<p align="center">
-  <a href="#about">About</a> &nbsp;·&nbsp;
-  <a href="#tech-stack">Tech Stack</a> &nbsp;·&nbsp;
-  <a href="#projects">Projects</a> &nbsp;·&nbsp;
-  <a href="#experience">Experience</a> &nbsp;·&nbsp;
-  <a href="#latest-repository-updates">Latest Updates</a> &nbsp;·&nbsp;
-  <a href="#github-activity">GitHub Activity</a> &nbsp;·&nbsp;
-  <a href="#freelance-services">Freelance Services</a> &nbsp;·&nbsp;
-  <a href="#contact">Contact</a>
-</p>
+## Featured Projects
 
-<p align="center">
-  <a href="https://nirmik-portfolio.vercel.app/"><img src="assets/portfolio-button.svg" width="250" alt="Visit My Portfolio →" /></a>
-</p>
-
-<p align="center"><em>Thoughtful interfaces. Reusable components. Details that make the web easier to use.</em></p>
-
-## About
-
-I'm **Nirmik Ukani**, a **Frontend Developer with 1+ year of hands-on experience** building responsive, interactive web interfaces with **React.js and JavaScript**. I turn UI designs into reusable components, with attention to accessibility, performance, and maintainable code.
-
-**Current focus** — Deepening my React knowledge, learning TypeScript and Next.js, and improving how I structure modern frontend applications.
-
-## Tech Stack
-
-**Frontend** · HTML5 / CSS3 / JavaScript / React.js  
-<img src="assets/skills-frontend.svg" width="208" alt="HTML5, CSS3, JavaScript and React.js" />
-
-**Styling** · Bootstrap / Tailwind CSS  
-<img src="assets/skills-styling.svg" width="100" alt="Bootstrap and Tailwind CSS" />
-
-**Tools** · Git / GitHub / VS Code / Vite  
-<img src="assets/skills-tools.svg" width="208" alt="Git, GitHub, VS Code and Vite" />
-
-**Currently learning** · TypeScript / Next.js  
-<img src="assets/skills-learning.svg" width="100" alt="Currently learning TypeScript and Next.js" />
-
-## Projects
-
-Selected work across application interfaces, browser interaction, and responsive websites. Explore the source or try a live demo.
+<!-- PROJECTS:START -->
 
 <table>
-  <tr><td>
-    <h3>01 &nbsp; ERP Management Frontend</h3>
-    <p>A modular React dashboard for customer management, product listings, inventory views, and chart-based reporting.</p>
-    <p>Customer create/edit/delete flows · Search and status filters · Stock overview · Reusable navigation and tables</p>
-    <p><code>React.js</code> <code>JavaScript</code> <code>CSS3</code> <code>Material UI</code> <code>Recharts</code> <code>Vite</code></p>
-    <p><a href="https://erp-app-khaki.vercel.app/">Live demo ↗</a> &nbsp;·&nbsp; <a href="https://github.com/ukaninirmik65-hash/ERP-App">Source code</a> &nbsp;·&nbsp; Frontend prototype with local/static data</p>
-  </td></tr>
-  <tr><td>
-    <h3>02 &nbsp; Atal Kriya 2.0</h3>
-    <p>An employee self-service frontend prototype for attendance, leave requests, expenses, and map-based field workflows.</p>
-    <p>Check-in/check-out UI · Leave validation · Expense records · Route map views · Shared toast and empty states</p>
-    <p><code>React.js</code> <code>JavaScript</code> <code>Tailwind CSS</code> <code>React Router</code> <code>Leaflet</code> <code>Vite</code></p>
-    <p><a href="https://atak-kriya-2-o.vercel.app/">Live demo ↗</a> &nbsp;·&nbsp; <a href="https://github.com/ukaninirmik65-hash/atakKriya-2.O">Source code</a> &nbsp;·&nbsp; Simulated login and browser-local data</p>
-  </td></tr>
-  <tr><td>
-    <h3>03 &nbsp; Tetris Game</h3>
-    <p>A Canvas-based falling-block game built with vanilla JavaScript.</p>
-    <p>Keyboard controls · Collision detection · Line clearing · Next-piece preview · Sound effects · Local high scores</p>
-    <p><code>HTML5</code> <code>CSS3</code> <code>JavaScript</code> <code>Canvas API</code></p>
-    <p><a href="https://ukaninirmik65-hash.github.io/Tetris-Game/">Play the game ↗</a> &nbsp;·&nbsp; <a href="https://github.com/ukaninirmik65-hash/Tetris-Game">Source code</a></p>
-  </td></tr>
-  <tr><td>
-    <h3>04 &nbsp; Anita Jewellery</h3>
-    <p>A responsive jewellery storefront interface with bold promotional imagery and collection-led layouts.</p>
-    <p>Promotional hero · Product showcases · Collection sections · Mobile navigation</p>
-    <p><code>HTML5</code> <code>CSS3</code> <code>JavaScript</code></p>
-    <p><a href="https://anitajewellerys-k56t.vercel.app/">Live demo ↗</a> &nbsp;·&nbsp; <a href="https://github.com/ukaninirmik65-hash/Anitajewellerys">Source code</a> &nbsp;·&nbsp; Storefront UI showcase</p>
-  </td></tr>
-  <tr><td>
-    <h3>05 &nbsp; Neelmadhav Public School</h3>
-    <p>An informational school website with responsive navigation, academic sections, and scroll-driven interactions.</p>
-    <p>Mobile menu · Active section navigation · Gallery · Event toggles · Reduced-motion support</p>
-    <p><code>HTML5</code> <code>CSS3</code> <code>JavaScript</code></p>
-    <p><a href="https://neelmadhav-public-school.vercel.app/">Live demo ↗</a> &nbsp;·&nbsp; <a href="https://github.com/ukaninirmik65-hash/Neelmadhav-Public-School">Source code</a></p>
-  </td></tr>
-  <tr><td>
-    <h3>06 &nbsp; Personal Portfolio</h3>
-    <p>A responsive React portfolio presenting my projects, frontend services, and a focused inquiry flow.</p>
-    <p>Dark/light theme · Project filtering · Reusable components · Validated inquiry form · Reduced-motion support</p>
-    <p><code>React.js</code> <code>JavaScript</code> <code>Tailwind CSS</code> <code>Vite</code></p>
-    <p><a href="https://nirmik-portfolio.vercel.app/">Explore portfolio ↗</a> &nbsp;·&nbsp; <a href="https://github.com/ukaninirmik65-hash/nirmik-portfolio">Source code</a></p>
-  </td></tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>ERP Management Frontend</h3>
+      <p>React dashboard for customer records, product listings, inventory and reporting. The frontend prototype uses local and static data.</p>
+      <p><code>React.js</code> <code>JavaScript</code> <code>CSS3</code> <code>Material UI</code> <code>Recharts</code> <code>Vite</code></p>
+      <p>JavaScript · 0 stars</p>
+      <p>Code updated 2026-09-23</p>
+      <p><a href="https://github.com/ukaninirmik65-hash/ERP-App">ERP-App</a> · <a href="https://erp-app-khaki.vercel.app/">Live demo</a></p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>Atal Kriya 2.0</h3>
+      <p>Employee self-service prototype covering attendance, leave, expenses and map-based field workflows, with simulated login and browser-local data.</p>
+      <p><code>React.js</code> <code>JavaScript</code> <code>Tailwind CSS</code> <code>React Router</code> <code>Leaflet</code> <code>Vite</code></p>
+      <p>JavaScript · 0 stars</p>
+      <p>Code updated 2026-10-08</p>
+      <p><a href="https://github.com/ukaninirmik65-hash/atakKriya-2.O">atakKriya-2.O</a> · <a href="https://atak-kriya-2-o.vercel.app/">Live demo</a></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>Tetris Game</h3>
+      <p>Browser-based falling-block game with keyboard controls, line clearing, a next-piece preview, sound effects and local high scores.</p>
+      <p><code>HTML5</code> <code>CSS3</code> <code>JavaScript</code> <code>Canvas API</code></p>
+      <p>JavaScript · 1 star</p>
+      <p>Code updated 2026-03-30</p>
+      <p><a href="https://github.com/ukaninirmik65-hash/Tetris-Game">Tetris-Game</a> · <a href="https://ukaninirmik65-hash.github.io/Tetris-Game/">Live demo</a></p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>Anita Jewellery</h3>
+      <p>Responsive jewellery storefront showcase with a promotional hero, collection and product layouts, and mobile navigation.</p>
+      <p><code>HTML5</code> <code>CSS3</code> <code>JavaScript</code></p>
+      <p>CSS · 0 stars</p>
+      <p>Code updated 2026-05-20</p>
+      <p><a href="https://github.com/ukaninirmik65-hash/Anitajewellerys">Anitajewellerys</a> · <a href="https://anitajewellerys-k56t.vercel.app/">Live demo</a></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>Neelmadhav Public School</h3>
+      <p>School information site with responsive navigation, academic sections, a gallery, event toggles and reduced-motion support.</p>
+      <p><code>HTML5</code> <code>CSS3</code> <code>JavaScript</code></p>
+      <p>JavaScript · 0 stars</p>
+      <p>Code updated 2026-08-29</p>
+      <p><a href="https://github.com/ukaninirmik65-hash/Neelmadhav-Public-School">Neelmadhav-Public-School</a> · <a href="https://neelmadhav-public-school.vercel.app/">Live demo</a></p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>Personal Portfolio</h3>
+      <p>React portfolio for projects and frontend services, with theme switching, project filtering and a validated inquiry form.</p>
+      <p><code>React.js</code> <code>JavaScript</code> <code>Tailwind CSS</code> <code>Vite</code></p>
+      <p>JavaScript · 0 stars</p>
+      <p>Code updated 2026-11-17</p>
+      <p><a href="https://github.com/ukaninirmik65-hash/nirmik-portfolio">nirmik-portfolio</a> · <a href="https://nirmik-portfolio.vercel.app/">Live demo</a></p>
+    </td>
+  </tr>
 </table>
 
-## Experience
+<!-- PROJECTS:END -->
 
-**Frontend Development — 1+ Year**  
-Hands-on project development using React.js, JavaScript, and responsive web design. My work spans UI implementation, component-based architecture, interactive browser features, and refining layouts across screen sizes.
+## GitHub Analytics
 
-## Latest Repository Updates
+<!-- STATS:START -->
 
-Recently updated original public repositories, generated from GitHub's API. Every repository below links directly to its source.
+**Public account totals**
 
-<picture>
-  <source media="(max-width: 600px)" srcset="assets/latest-repositories-mobile.svg" />
-  <img src="assets/latest-repositories.svg" width="100%" alt="Latest public repository updates with names, descriptions, primary languages, stars, forks, and updated dates." />
-</picture>
+| Repos | Stars | Followers |
+| ---: | ---: | ---: |
+| 9 | 1 | 6 |
 
-<!-- LATEST_REPOSITORIES:START -->
-- [**nirmik-portfolio**](https://github.com/ukaninirmik65-hash/nirmik-portfolio) · JavaScript · ★ 0 · forks 0 · updated 2026-11-26
-- [**atakKriya-2.O**](https://github.com/ukaninirmik65-hash/atakKriya-2.O) · JavaScript · ★ 0 · forks 0 · updated 2026-10-08
-- [**ERP-App**](https://github.com/ukaninirmik65-hash/ERP-App) · JavaScript · ★ 0 · forks 0 · updated 2026-09-23
-- [**Neelmadhav-Public-School**](https://github.com/ukaninirmik65-hash/Neelmadhav-Public-School) · JavaScript · ★ 0 · forks 0 · updated 2026-08-29
-- [**Anitajewellerys**](https://github.com/ukaninirmik65-hash/Anitajewellerys) · CSS · ★ 0 · forks 0 · updated 2026-05-20
-- [**motiwalaperfumes-clone**](https://github.com/ukaninirmik65-hash/motiwalaperfumes-clone) · HTML · ★ 0 · forks 0 · updated 2026-04-15
-<!-- LATEST_REPOSITORIES:END -->
+**Public contributions** · 2026-01-01 to 2026-11-27 UTC
 
-## GitHub Activity
+| Commits | PRs | Profile streak |
+| ---: | ---: | ---: |
+| 101 | 3 | 2 days |
 
-Public GitHub statistics, contribution calendar, language composition, and streaks. All values refresh from GitHub data.
+<!-- STATS:END -->
 
-<picture>
-  <source media="(max-width: 600px)" srcset="assets/github-statistics-mobile.svg" />
-  <img src="assets/github-statistics.svg" width="100%" alt="Live-generated GitHub statistics for public repositories, stars, forks, followers, and available public contribution metrics." />
-</picture>
+## Development Activity Overview
 
-<picture>
-  <source media="(max-width: 600px)" srcset="assets/contribution-graph-mobile.svg" />
-  <img src="assets/contribution-graph.svg" width="100%" alt="Current-year GitHub contribution calendar with dated daily counts and green, cyan and purple contribution intensity." />
-</picture>
+<!-- ACTIVITY_OVERVIEW:START -->
 
-<picture>
-  <source media="(max-width: 600px)" srcset="assets/github-languages-mobile.svg" />
-  <img src="assets/github-languages.svg" width="100%" alt="Most-used languages by public non-fork repository code bytes and contribution streaks within the displayed calendar year." />
-</picture>
+**Public contributions** · 2026-01-01 to 2026-11-27 UTC
 
-<details>
-  <summary>Data sources and refresh details</summary>
+<img align="right" src="assets/activity-overview.svg" width="350" alt="Contribution breakdown. Code reviews 0%, Issues 0%, Pull requests 2.88%, Commits 97.12%" />
 
-Charts refresh daily and on supported repository events, with manual updates available in Actions. The Latest Repository Updates section prioritizes recently pushed original public repositories and excludes this profile repository, so automation commits do not displace project work. Repository totals include this profile repository; language shares use code bytes, not proficiency. Contribution counts follow GitHub's calendar rules and show the date window and source on each chart. A contribution streak counts consecutive active days within that window.
+**Commits** · 101<br />**Pull requests** · 3<br />**Code reviews** · 0<br />**Issues** · 0
 
-GitHub's native profile calendar is authoritative. This profile does not claim access to private contributions. If an API is temporarily unavailable, the last successful chart stays visible with its original data date. [Setup and metric definitions](docs/SETUP.md) · [Verified project details](docs/PROJECT-VERIFICATION.md)
+**Recently contributed public repositories**
 
-</details>
+- [ukaninirmik65-hash/nirmik-portfolio](<https://github.com/ukaninirmik65-hash/nirmik-portfolio>)
+- [DhruvilPatel121/Construction&#95;Web](<https://github.com/DhruvilPatel121/Construction_Web>)
+- [shivvilonsolutions-dev/Inventory&#95;System](<https://github.com/shivvilonsolutions-dev/Inventory_System>)
+- [ukaninirmik65-hash/atakKriya-2.O](<https://github.com/ukaninirmik65-hash/atakKriya-2.O>)
+- [ukaninirmik65-hash/ERP-App](<https://github.com/ukaninirmik65-hash/ERP-App>)
 
-## Freelance Services
+<br clear="both" />
 
-Have a frontend brief or an interface that needs attention? I can help with:
+<!-- ACTIVITY_OVERVIEW:END -->
 
-- **Build** — Responsive websites, landing pages, and React.js frontends.
-- **Improve** — Website redesigns, UI improvements, and responsive layouts.
-- **Refine** — JavaScript development and frontend bug fixes.
+## Programming Language Distribution
 
-**[Discuss your project on Freelancer ↗](https://www.freelancer.in/u/nirmikukani)**
+<!-- LANGUAGES:START -->
 
-## Contact
+<img src="assets/language-distribution.svg" width="366" alt="Share of repository language bytes. JavaScript 43.47%, TypeScript 27.82%, CSS 21.25%, HTML 7.46%" />
 
-**Let's build a clear, useful web experience.**
+Based on language bytes in eligible public repositories. [Repository exclusions](docs/SETUP.md#language-distribution)
 
-[Portfolio ↗](https://nirmik-portfolio.vercel.app/) &nbsp;·&nbsp; [LinkedIn](https://www.linkedin.com/in/nirmik-ukani-a14a3334b/) &nbsp;·&nbsp; [Freelancer](https://www.freelancer.in/u/nirmikukani) &nbsp;·&nbsp; [GitHub](https://github.com/ukaninirmik65-hash)
+<!-- LANGUAGES:END -->
 
-<p align="center">
-  <img src="assets/footer.svg" width="100%" alt="Building interfaces. Solving problems. Growing every day. Animated gradient footer." />
-</p>
+## Recent Development Activity
+
+<!-- RECENT_ACTIVITY:START -->
+
+- [Add Quality Assurance page with routing and styles](<https://github.com/DhruvilPatel121/Construction_Web/commit/fb76392fd35ad8dbb5995c255f7373b95f61fa80>) · Commit · DhruvilPatel121/Construction&#95;Web · 2026-11-24
+- [Refactor App component to use centralized routing and remove redundant code](<https://github.com/DhruvilPatel121/Construction_Web/commit/60ebb1aef68d75f1e082c00a08e261c65e3e8146>) · Commit · DhruvilPatel121/Construction&#95;Web · 2026-11-20
+- [Implement centralized routing with React Router and add Certificates page](<https://github.com/DhruvilPatel121/Construction_Web/commit/c00dd0ddc87249548ef6b7d11d6fbe8bc1b2a011>) · Commit · DhruvilPatel121/Construction&#95;Web · 2026-11-20
+- [Add Awards page with reusable media wipe and update routing](<https://github.com/DhruvilPatel121/Construction_Web/commit/2562ddf9ad316e87a3cbefe05ee67f23eaac7372>) · Commit · DhruvilPatel121/Construction&#95;Web · 2026-11-20
+- [Implement reusable PageBanner component and standardize inner-page banners across About and Achievements pages](<https://github.com/DhruvilPatel121/Construction_Web/commit/eebdd6904974f08965f69ba3ef053f8563c8dcd4>) · Commit · DhruvilPatel121/Construction&#95;Web · 2026-11-19
+
+<!-- RECENT_ACTIVITY:END -->
+
+## Professional Experience
+
+**Frontend development · 1+ year of hands-on experience**
+
+My work includes implementing UI designs, building reusable React components, adding interactive browser features, and refining layouts across screen sizes.
+
+## Connect With Me
+
+[Portfolio](https://nirmik-portfolio.vercel.app/) · [LinkedIn](https://www.linkedin.com/in/nirmik-ukani-a14a3334b/) · [Freelancer](https://www.freelancer.in/u/nirmikukani) · [GitHub](https://github.com/ukaninirmik65-hash)
+
+**Freelance services** · Responsive websites, landing pages, React.js frontends, website redesigns, UI improvements, JavaScript development, and frontend bug fixes.
+
+## Last Successful Data Update
+
+<!-- LAST_UPDATED:START -->
+
+**2026-11-27 13:34 UTC** · Last complete data update.
+
+<!-- LAST_UPDATED:END -->
+
+[Data sources and refresh schedule](docs/SETUP.md) · [Project verification](docs/PROJECT-VERIFICATION.md)

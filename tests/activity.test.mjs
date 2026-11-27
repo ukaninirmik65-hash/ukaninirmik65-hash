@@ -1,26 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
-  fetchAllPages,
-  requestGitHub,
-  parseContributionHTML,
-  normalizeGraphQL,
-  summarizeRepositories,
-  calculateStreaks,
-  buildModel,
-  renderAssets,
-  renderLatestRepositoryLinks,
-  updateProfile,
-} from '../scripts/update-profile.mjs';
+  currentStreak, fetchActivity, fetchAllPages, fetchLanguages, languageDistribution, normalizeActivity,
+  normalizeInventory, parsePublicCalendar, publicRequest, requestGitHub,
+} from '../scripts/profile-data.mjs';
+import { assertSafeOutputs, replaceSections, updateProfile, validateProfile } from '../scripts/update-profile.mjs';
 
-const json = (value, options = {}) => new Response(JSON.stringify(value), {
-  status: 200,
-  headers: { 'content-type': 'application/json', ...options.headers },
-  ...options,
-});
+const API = 'https://api.github.com';
+const OWNER = 'example';
+const PERIOD = { from: '2026-01-01', to: '2026-01-03' };
+const INSTANT = '2026-01-03T09:00:00.000Z';
+const LATER = '2026-01-03T15:00:00.000Z';
+const TOKEN = 'unit-test-credential-that-must-not-appear';
+const SHA = '2'.repeat(40);
+const sections = ['PROJECTS', 'STATS', 'ACTIVITY_OVERVIEW', 'LANGUAGES', 'RECENT_ACTIVITY', 'LAST_UPDATED'];
+const readme = ['# My developer profile', ...sections.map(name => `<!-- ${name}:START -->\nOriginal ${name} text\n<!-- ${name}:END -->`), 'Manual footer', ''].join('\n\n');
+const json = (value, options) => Response.json(value, options);
 
 const calendarHTML = `
   <td data-date="2026-01-01" id="day-a" data-level="1"></td>
@@ -29,311 +27,272 @@ const calendarHTML = `
   <tool-tip for="day-b">1,234 contributions on January 2nd.</tool-tip>
   <tool-tip for="day-c">No contributions on January 3rd.</tool-tip>
   <tool-tip for="day-a">1 contribution on January 1st.</tool-tip>`;
+const days = [
+  { date: '2026-01-01', count: 1 },
+  { date: '2026-01-02', count: 1234 },
+  { date: '2026-01-03', count: 0 },
+];
 
-test('repository pagination follows the Link header even after a short page', async () => {
-  const visited = [];
-  const request = async (url) => {
-    visited.push(String(url));
-    return visited.length === 1
-      ? json([{ id: 1 }], { headers: { link: '<https://api.github.com/users/example/repos?page=2>; rel="next"' } })
-      : json([{ id: 2 }]);
-  };
-  const result = await fetchAllPages('https://api.github.com/users/example/repos?per_page=100', { request });
-  assert.deepEqual(result.map((repo) => repo.id), [1, 2]);
-  assert.equal(visited.length, 2);
-  assert.match(visited[1], /page=2/);
-});
-
-test('repository totals count real stars and forks across original and forked public repos', () => {
-  const result = summarizeRepositories([
-    { id: 1, name: 'one', stargazers_count: 5, forks_count: 2, fork: false, archived: false },
-    { id: 2, name: 'two', stargazers_count: 3, forks_count: 4, fork: true, archived: false },
-    { id: 3, name: 'three', stargazers_count: 0, forks_count: 1, fork: false, archived: true },
-  ]);
-  assert.equal(result.total, 3);
-  assert.equal(result.stars, 8);
-  assert.equal(result.forks, 7);
-  assert.equal(result.originals, 2);
-});
-
-test('public calendar joins exact tooltip counts to dates instead of estimating from color', () => {
-  const result = parseContributionHTML(calendarHTML, { from: '2026-01-01', to: '2026-01-03' });
-  assert.deepEqual(result.days.map(({ date, count }) => ({ date, count })), [
-    { date: '2026-01-01', count: 1 },
-    { date: '2026-01-02', count: 1234 },
-    { date: '2026-01-03', count: 0 },
-  ]);
-  assert.equal(result.total, 1235);
-});
-
-test('calendar parser refuses a missing exact count rather than turning it into zero', () => {
-  const missing = calendarHTML.replace('<tool-tip for="day-b">1,234 contributions on January 2nd.</tool-tip>', '');
-  assert.throws(() => parseContributionHTML(missing, { from: '2026-01-01', to: '2026-01-03' }));
-});
-
-test('calendar parser refuses a gap in the requested date range', () => {
-  const gap = calendarHTML.replace('<td data-date="2026-01-02" id="day-b" data-level="4"></td>', '');
-  assert.throws(() => parseContributionHTML(gap, { from: '2026-01-01', to: '2026-01-03' }));
-});
-
-test('streak includes yesterday when today has no contribution', () => {
-  const result = calculateStreaks([
-    { date: '2026-01-01', count: 1 },
-    { date: '2026-01-02', count: 1 },
-    { date: '2026-01-03', count: 0 },
-  ], '2026-01-03');
-  assert.equal(result.current, 2);
-  assert.equal(result.longest, 2);
-});
-
-test('a completed empty day breaks the current streak without changing the longest streak', () => {
-  const result = calculateStreaks([
-    { date: '2026-01-01', count: 1 },
-    { date: '2026-01-02', count: 1 },
-    { date: '2026-01-03', count: 0 },
-    { date: '2026-01-04', count: 0 },
-  ], '2026-01-04');
-  assert.equal(result.current, 0);
-  assert.equal(result.longest, 2);
-});
-
-test('request retries temporary upstream failures and succeeds without a real delay', async () => {
-  let attempts = 0;
-  const sleeps = [];
-  const response = await requestGitHub('https://api.github.com/users/example', {
-    fetchImpl: async () => (++attempts < 3 ? new Response('temporary', { status: 503 }) : json({ login: 'example' })),
-    sleep: async (ms) => { sleeps.push(ms); },
-    maxAttempts: 3,
-  });
-  assert.equal(response.status, 200);
-  assert.equal(attempts, 3);
-  assert.equal(sleeps.length, 2);
-  assert.ok(sleeps.every((ms) => ms >= 0 && ms <= 10000));
-});
-
-test('authentication failures are not retried and do not reveal a token or response body', async () => {
-  let attempts = 0;
-  const token = 'ghp_TEST_TOKEN_MUST_NEVER_APPEAR_IN_AN_ERROR';
-  await assert.rejects(
-    requestGitHub('https://api.github.com/users/example', {
-      token,
-      fetchImpl: async () => { attempts++; return new Response(token, { status: 401 }); },
-      sleep: async () => assert.fail('401 must not sleep or retry'),
-      maxAttempts: 3,
-    }),
-    (error) => !String(error).includes(token),
-  );
-  assert.equal(attempts, 1);
-});
-
-test('public HTML requests never receive the GitHub API authorization header', async () => {
-  let headers;
-  await requestGitHub('https://github.com/users/example/contributions', {
-    token: 'ghp_TEST_TOKEN',
-    fetchImpl: async (_url, options) => { headers = new Headers(options.headers); return new Response('calendar'); },
-  });
-  assert.equal(headers.has('authorization'), false);
-});
-
-test('required API failure leaves previously generated assets untouched', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'profile-required-failure-'));
-  const sentinel = join(root, 'unchanged.txt');
-  await writeFile(sentinel, 'last successful output');
-  await assert.rejects(updateProfile({
-    username: 'example',
-    root,
-    today: '2026-01-03',
-    request: async () => { throw new Error('GitHub temporarily unavailable'); },
-  }));
-  assert.equal(await readFile(sentinel, 'utf8'), 'last successful output');
-  assert.deepEqual(await readdir(root), ['unchanged.txt']);
-});
-
-const repository = {
-  id: 1,
-  name: 'interface',
-  private: false,
-  stargazers_count: 2,
-  forks_count: 1,
-  fork: false,
-  archived: false,
-  pushed_at: '2026-01-02T12:00:00Z',
-  language: 'JavaScript',
-};
-
-const calendar = () => parseContributionHTML(calendarHTML, { from: '2026-01-01', to: '2026-01-03' });
-const sampleModel = (overrides = {}) => buildModel({
-  user: { login: 'example', followers: 4 },
-  repositories: [repository],
-  languages: { bytes: { JavaScript: 750, CSS: 250 }, observedAt: '2026-01-03' },
-  contributions: calendar(),
-  today: '2026-01-03',
-  ...overrides,
-});
-
-test('model strips unrequested account and repository fields from the public snapshot', () => {
-  const model = sampleModel({
-    user: { login: 'example', followers: 4, token: 'SECRET_USER_FIELD' },
-    repositories: [{ ...repository, token: 'SECRET_REPO_FIELD' }, { ...repository, id: 2, name: 'private-project', private: true }],
-  });
-  const serialized = JSON.stringify(model);
-  assert.equal(model.totals.total, 1);
-  assert.doesNotMatch(serialized, /SECRET_|private-project/);
-});
-
-test('unchanged API data retains its observation date and produces byte-identical SVGs', () => {
-  const first = sampleModel();
-  const second = sampleModel({ previous: first, today: '2026-01-04' });
-  assert.equal(second.observedAt, first.observedAt);
-  assert.deepEqual(renderAssets(second), renderAssets(first));
-});
-
-test('SVGs escape API strings and provide accessible titles without active content', () => {
-  const model = sampleModel({ repositories: [{ ...repository, name: 'ui<&"' }] });
-  const outputs = renderAssets(model);
-  assert.equal(Object.keys(outputs).length, 8);
-  assert.match(outputs['latest-repositories.svg'], /ui&lt;&amp;&quot;/);
-  for (const content of Object.values(outputs)) {
-    assert.match(content, /<title[^>]*>[^<]+<\/title>/);
-    assert.match(content, /role="img"/);
-    assert.doesNotMatch(content, /<script|<foreignObject|onload\s*=/i);
-    assert.doesNotMatch(content, /NaN|Infinity|undefined/);
-  }
-});
-
-test('latest repository output prioritizes original project repositories and provides direct GitHub links', () => {
-  const model = sampleModel({ repositories: [
-    { ...repository, name: 'profile-owner', pushed_at: '2026-01-03T00:00:00Z' },
-    { ...repository, id: 2, name: 'project-one', description: 'A recent frontend project', pushed_at: '2026-01-02T00:00:00Z' },
-    { ...repository, id: 3, name: 'forked-project', fork: true, pushed_at: '2026-01-04T00:00:00Z' },
-  ], user: { login: 'profile-owner', followers: 4 } });
-  const links = renderLatestRepositoryLinks(model);
-  assert.match(links, /\[\*\*project-one\*\*\]\(https:\/\/github\.com\/profile-owner\/project-one\)/);
-  assert.doesNotMatch(links, /profile-owner\*\*\]|forked-project/);
-  assert.match(renderAssets(model)['latest-repositories.svg'], /A recent frontend project/);
-});
-
-test('pagination rejects an off-site next link before making a second request', async () => {
-  let calls = 0;
-  await assert.rejects(fetchAllPages('https://api.github.com/users/example/repos', {
-    request: async () => {
-      calls++;
-      return json([{ id: 1 }], { headers: { link: '<https://untrusted.example/steal>; rel="next"' } });
-    },
-  }), /Unsafe/);
-  assert.equal(calls, 1);
-});
-
-test('pagination rejects a duplicate repository rather than inflating the totals', async () => {
-  await assert.rejects(fetchAllPages('https://api.github.com/users/example/repos', {
-    request: async () => json([{ id: 1 }, { id: 1 }]),
-  }), /pagination changed/);
-});
-
-test('a long Retry-After fails promptly for a later run instead of blocking', async () => {
-  let calls = 0;
-  await assert.rejects(requestGitHub('https://api.github.com/users/example', {
-    fetchImpl: async () => {
-      calls++;
-      return new Response('rate limited', { status: 429, headers: { 'retry-after': '3600' } });
-    },
-    sleep: async () => assert.fail('long rate limits must not sleep'),
-  }), /HTTP 429/);
-  assert.equal(calls, 1);
-});
-
-const graphPayload = () => ({
-  data: {
-    user: {
-      contributionsCollection: {
-        contributionCalendar: { weeks: [{ contributionDays: calendar().days.map(({ date, count }) => ({ date, contributionCount: count })) }] },
-        totalRepositoriesWithContributedCommits: 2,
-        commitContributionsByRepository: [
-          { repository: { isPrivate: false }, contributions: { totalCount: 7 } },
-          { repository: { isPrivate: true }, contributions: { totalCount: 11 } },
-        ],
-        pullRequestContributions: {
-          pageInfo: { hasNextPage: false },
-          nodes: [
-            { isRestricted: false, pullRequest: { repository: { isPrivate: false } } },
-            { isRestricted: false, pullRequest: { repository: { isPrivate: true } } },
-            { isRestricted: true, pullRequest: null },
-          ],
-        },
-        issueContributions: { pageInfo: { hasNextPage: true }, nodes: [] },
-        pullRequestReviewContributions: {
-          pageInfo: { hasNextPage: false },
-          nodes: [{ isRestricted: false, pullRequestReview: { pullRequest: { repository: { isPrivate: false } } } }],
-        },
-      },
-    },
-  },
-});
-
-test('GraphQL breakdown excludes private contributions and omits truncated metrics', () => {
-  const payload = graphPayload();
-  const result = normalizeGraphQL(payload, { from: '2026-01-01', to: '2026-01-03' });
-  assert.deepEqual(result.metrics, { commits: 7, pullRequests: 1, reviews: 1 });
-  payload.data.user.contributionsCollection.totalRepositoriesWithContributedCommits = 101;
-  const truncated = normalizeGraphQL(payload, { from: '2026-01-01', to: '2026-01-03' });
-  assert.equal('commits' in truncated.metrics, false);
-});
-
-function publicRequest({ optionalFailure = false, authenticatedCountsDiffer = false } = {}) {
-  return async (url) => {
-    const target = String(url);
-    if (target.endsWith('/users/example')) return json({ login: 'example', followers: 4, public_repos: 1 });
-    if (target.includes('/users/example/repos?')) return json([repository]);
-    if (target.endsWith('/languages')) {
-      if (optionalFailure) throw new Error('temporary language failure');
-      return json({ JavaScript: 750, CSS: 250 });
-    }
-    if (target.includes('github.com/users/example/contributions')) {
-      if (optionalFailure) throw new Error('temporary calendar failure');
-      return new Response(calendarHTML);
-    }
-    if (target.endsWith('/graphql')) {
-      const payload = graphPayload();
-      if (authenticatedCountsDiffer) payload.data.user.contributionsCollection.contributionCalendar.weeks[0].contributionDays[0].contributionCount += 999;
-      return json(payload);
-    }
-    throw new Error(`Unexpected fixture request: ${target}`);
+function repository(id, name, metadata = {}) {
+  return {
+    id, name, owner: { login: OWNER }, private: false, visibility: 'public', stargazers_count: 0,
+    forks_count: 0, fork: false, archived: false, disabled: false, pushed_at: '2026-01-02T12:00:00Z',
+    language: 'JavaScript', description: 'Existing application', topics: ['featured'], ...metadata,
   };
 }
 
-test('repeating a successful refresh makes no new file changes', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'profile-determinism-'));
-  await writeFile(join(root, 'README.md'), '## Latest Repository Updates\n\n<!-- LATEST_REPOSITORIES:START -->\n<!-- LATEST_REPOSITORIES:END -->\n');
-  const options = { username: 'example', root, today: '2026-01-03', request: publicRequest() };
-  const first = await updateProfile(options);
-  assert.equal(first.changed, 10);
-  assert.match(await readFile(join(root, 'README.md'), 'utf8'), /\[\*\*interface\*\*\]\(https:\/\/github\.com\/example\/interface\)/);
-  const second = await updateProfile(options);
-  assert.equal(second.changed, 0);
-  assert.deepEqual(second.model, first.model);
+function contribution(nameWithOwner, totalCount, occurredAt, visibility = 'PUBLIC') {
+  return { repository: { nameWithOwner, visibility }, contributions: { totalCount, nodes: [{ occurredAt }] } };
+}
+
+function graphResponse(overrides = {}) {
+  return { data: { user: { login: OWNER, contributionsCollection: {
+    restrictedContributionsCount: 0,
+    contributionCalendar: { weeks: [{ contributionDays: days.map(({ date, count }) => ({ date, contributionCount: count })) }] },
+    totalCommitContributions: 6,
+    commitContributionsByRepository: [
+      contribution('example/interface', 4, '2026-01-01T00:00:00Z'),
+      contribution('collaborator/website', 2, '2026-01-02T00:00:00Z'),
+    ],
+    totalPullRequestContributions: 1,
+    pullRequestContributionsByRepository: [contribution('EXAMPLE/interface', 1, '2026-01-02T14:00:00Z')],
+    totalPullRequestReviewContributions: 0,
+    pullRequestReviewContributionsByRepository: [],
+    totalIssueContributions: 0,
+    issueContributionsByRepository: [],
+    ...overrides,
+  } } } };
+}
+
+function mockRequest({ followers = 4, languagesOffline = false, badTitle = false } = {}) {
+  return async (href, options) => {
+    const { pathname, searchParams } = new URL(href);
+    switch (pathname) {
+      case '/users/example': return json({ login: OWNER, followers, public_repos: 1 });
+      case '/users/example/repos': return json([repository(1, 'interface', { stargazers_count: 2 })]);
+      case '/graphql': {
+        assert.equal(options.token, TOKEN);
+        const { query, variables } = JSON.parse(options.body);
+        assert.match(query, /totalCommitContributions[\s\S]+totalPullRequestContributions[\s\S]+totalPullRequestReviewContributions[\s\S]+totalIssueContributions/);
+        assert.equal(variables.from, '2026-01-01T00:00:00Z');
+        assert.equal(variables.login, OWNER);
+        return json(graphResponse());
+      }
+      case '/users/example/contributions': return new Response(calendarHTML);
+      case '/repos/example/interface/languages':
+        if (languagesOffline) throw Object.assign(new Error(`GitHub failed with ${TOKEN}`), { status: 503 });
+        return json({ JavaScript: 3, CSS: 1 });
+      case '/users/example/events/public': return json([]);
+      case '/repos/example/interface/commits':
+        assert.equal(searchParams.get('per_page'), '5');
+        return json([{
+          sha: SHA,
+          author: { login: OWNER, type: 'User' },
+          commit: { message: badTitle ? TOKEN : 'Improve accessible navigation', author: { date: '2026-01-02T12:00:00Z' }, committer: { date: '2026-01-02T12:00:00Z' } },
+        }]);
+      default: assert.fail(`Unexpected test request: ${pathname}`);
+    }
+  };
+}
+
+async function fixture(t, source = readme) {
+  const root = await mkdtemp(join(tmpdir(), 'profile-pipeline-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await writeFile(join(root, 'README.md'), source);
+  return { root, username: OWNER, token: TOKEN, now: INSTANT, request: mockRequest(), onWarning: () => {} };
+}
+
+test('pagination follows the Link header even when a repository page is short', async () => {
+  const next = `${API}/users/example/repos?page=2`;
+  const visited = [];
+  const result = await fetchAllPages(`${API}/users/example/repos?per_page=100`, { request: async url => {
+    visited.push(url);
+    return visited.length === 1 ? json([{ id: 1 }], { headers: { link: `<${next}>; rel="next"` } }) : json([{ id: 2 }]);
+  } });
+  assert.deepEqual(result, [{ id: 1 }, { id: 2 }]);
+  assert.equal(visited[1], next);
 });
 
-test('optional failures retain successful calendar and languages with their original dates', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'profile-optional-failure-'));
-  const first = await updateProfile({ username: 'example', root, today: '2026-01-03', request: publicRequest() });
-  const retained = await updateProfile({ username: 'example', root, today: '2026-01-04', request: publicRequest({ optionalFailure: true }) });
-  assert.deepEqual(retained.model.languages, first.model.languages);
-  assert.deepEqual(retained.model.contributions, first.model.contributions);
-  assert.equal(retained.model.contributions.to, '2026-01-03');
-  assert.equal(retained.model.languages.observedAt, '2026-01-03');
+test('pagination rejects off-site redirects, cycles and repeated identifiers', async () => {
+  const url = `${API}/users/example/repos`;
+  for (const next of ['https://untrusted.example/steal', url]) {
+    let calls = 0;
+    await assert.rejects(fetchAllPages(url, { request: async () => {
+      calls++;
+      return json([{ id: 1 }], { headers: { link: `<${next}>; rel="next"` } });
+    } }), /Unsafe or circular/);
+    assert.equal(calls, 1);
+  }
+  await assert.rejects(fetchAllPages(url, { request: async () => json([{ id: '1' }, { id: '1' }]) }), /duplicate identifier/);
 });
 
-test('a broader authenticated calendar never replaces publicly visible calendar counts', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'profile-public-scope-'));
-  const result = await updateProfile({
-    username: 'example',
-    root,
-    today: '2026-01-03',
-    token: 'ghp_TEST_TOKEN',
-    request: publicRequest({ authenticatedCountsDiffer: true }),
+test('inventory totals count public repositories, including forks, while screening private data', () => {
+  const input = [repository(1, 'interface', { stargazers_count: 3, secret: TOKEN }), repository(2, 'fork', { fork: true, stargazers_count: 2 }),
+    repository(3, 'restricted-secret-name', { private: true, visibility: 'private', stargazers_count: 18 })];
+  const model = normalizeInventory({ login: OWNER, followers: 0, public_repos: 2 }, input, OWNER);
+  assert.deepEqual(model.stats, { repositories: 2, stars: 5, followers: 0 });
+  assert.deepEqual(model.repositories.map(repo => repo.name), ['interface', 'fork']);
+  assert.doesNotMatch(JSON.stringify(model), /restricted-secret-name|unit-test-credential/);
+  assert.throws(() => normalizeInventory({ login: OWNER, followers: 0, public_repos: 3 }, input, OWNER), /Incomplete public repository inventory/);
+});
+
+test('language distribution uses real byte amounts and does not request excluded repositories', async () => {
+  const requested = [];
+  const result = await fetchLanguages(OWNER, [
+    { name: 'application' }, { name: 'library' }, { name: 'fork', fork: true }, { name: 'archived', archived: true },
+    { name: 'disabled', disabled: true }, { name: OWNER },
+  ], async url => {
+    requested.push(url);
+    return json(url.includes('/application/') ? { JavaScript: 50, CSS: 30 } : { JavaScript: 20 });
   });
-  assert.equal(result.model.contributions.total, 1235);
-  assert.equal(result.model.contributions.metrics, undefined);
-  const serialized = await readFile(join(root, 'assets', 'profile-data.json'), 'utf8');
-  assert.doesNotMatch(serialized, /ghp_TEST_TOKEN/);
+  assert.deepEqual(result, [{ name: 'JavaScript', bytes: 70, percentage: 70 }, { name: 'CSS', bytes: 30, percentage: 30 }]);
+  assert.equal(requested.length, 2);
+  assert.deepEqual(languageDistribution([{}, { CSS: 0 }]), []);
+  assert.throws(() => languageDistribution([{ JavaScript: -1 }]), /Invalid repository language byte count/);
+});
+
+test('calendar parser joins tooltip counts to dates and rejects missing counts or date gaps', () => {
+  assert.deepEqual(parsePublicCalendar(calendarHTML, PERIOD), days);
+  assert.throws(() => parsePublicCalendar(calendarHTML.replace(/<tool-tip for="day-b">.*?<\/tool-tip>/, ''), PERIOD), /Invalid daily contribution count/);
+  assert.throws(() => parsePublicCalendar(calendarHTML.replace(/<td data-date="2026-01-02".*?<\/td>/, ''), PERIOD), /incomplete/);
+});
+
+test('streak includes yesterday if today is empty and stops at the first missed day', () => {
+  assert.equal(currentStreak(days, PERIOD.to), 2);
+  assert.equal(currentStreak(days, '2026-01-04'), 0);
+  assert.equal(currentStreak(days, '2026-01-02'), 2);
+  assert.equal(currentStreak([], PERIOD.to), 0);
+});
+
+test('GitHub requests retry bounded temporary failures and avoid waiting on long rate limits', async () => {
+  let attempts = 0;
+  const waits = [];
+  const response = await requestGitHub(`${API}/users/example`, {
+    fetchImpl: async () => (++attempts < 3 ? new Response(null, { status: 503 }) : json({ login: OWNER })),
+    sleep: async ms => { waits.push(ms); },
+  });
+  assert.equal(response.status, 200);
+  assert.deepEqual(waits, [250, 500]);
+  await assert.rejects(requestGitHub(`${API}/users/example`, {
+    fetchImpl: async () => new Response(null, { status: 429, headers: { 'retry-after': '60' } }),
+    sleep: async () => assert.fail('Must defer a long rate-limit wait to a future run'),
+  }), error => error.status === 429 && error.rateLimited === true);
+});
+
+test('requests never expose token or response bodies in errors and only authorize GitHub API calls', async () => {
+  let attempts = 0;
+  await assert.rejects(requestGitHub(`${API}/users/example`, {
+    token: TOKEN,
+    fetchImpl: async (_url, options) => {
+      attempts++;
+      assert.equal(options.headers.get('authorization'), `Bearer ${TOKEN}`);
+      assert.equal(options.redirect, 'error');
+      return new Response(TOKEN, { status: 401 });
+    },
+    sleep: async () => assert.fail('Authentication failures should not sleep'),
+  }), error => error.status === 401 && !String(error).includes(TOKEN));
+  assert.equal(attempts, 1);
+  await requestGitHub('https://github.com/users/example/contributions', {
+    token: TOKEN, headers: { Authorization: `Bearer ${TOKEN}` },
+    fetchImpl: async (_url, options) => { assert.equal(options.headers.has('authorization'), false); return new Response(calendarHTML); },
+  });
+  await assert.rejects(requestGitHub('https://untrusted.example/steal', {
+    token: TOKEN, fetchImpl: async () => assert.fail('Credentials must not be forwarded off site'),
+  }), /Untrusted GitHub request origin/);
+});
+
+test('public repository requests can recover from insufficient Actions token access', async () => {
+  const headers = [];
+  const request = publicRequest(TOKEN, async (_url, options) => {
+    headers.push(options.headers.get('authorization'));
+    return headers.length === 1 ? new Response(null, { status: 403 }) : json({ public: true });
+  });
+  assert.deepEqual(await (await request(`${API}/repos/collaborator/website`)).json(), { public: true });
+  assert.deepEqual(headers, [`Bearer ${TOKEN}`, null]);
+});
+
+test('GraphQL breakdown uses public grouped contributions and rejects incomplete totals', () => {
+  const payload = graphResponse({ totalIssueContributions: 3, issueContributionsByRepository: [
+    contribution('example/private-project', 3, '2026-01-02T20:00:00Z', 'PRIVATE'),
+  ] });
+  const result = normalizeActivity(payload, OWNER, PERIOD);
+  assert.deepEqual(result.counts, { commits: 6, pullRequests: 1, reviews: 0, issues: 0 });
+  assert.equal(result.canVerifyStreak, false);
+  assert.deepEqual(result.repositories.map(repo => repo.name), ['EXAMPLE/interface', 'collaborator/website']);
+  assert.doesNotMatch(JSON.stringify(result), /private-project/);
+  assert.throws(() => normalizeActivity(graphResponse({ totalCommitContributions: 7 }), OWNER, PERIOD), /Incomplete GraphQL contribution breakdown/);
+  assert.throws(() => normalizeActivity({ errors: [{ message: 'access denied' }] }, OWNER, PERIOD), /Invalid GitHub GraphQL/);
+});
+
+test('an unexplained mismatch with anonymous counts leaves the activity refresh unavailable', async () => {
+  const request = async url => url.endsWith('/graphql') ? json(graphResponse()) : new Response(calendarHTML.replace('1,234', '1,233'));
+  await assert.rejects(fetchActivity({ username: OWNER, period: PERIOD, now: INSTANT, tokens: [TOKEN], request }), /anonymous contribution dates or counts differ/);
+});
+
+test('a credential with broader visibility cannot lengthen the signed-out streak', async () => {
+  const payload = graphResponse({ restrictedContributionsCount: 1,
+    contributionCalendar: { weeks: [{ contributionDays: days.map(({ date, count }) => ({
+      date, contributionCount: date === PERIOD.to ? 5 : count,
+    })) }] },
+  });
+  const request = async url => url.endsWith('/graphql') ? json(payload) : new Response(calendarHTML);
+  const result = await fetchActivity({ username: OWNER, period: PERIOD, now: INSTANT, tokens: [TOKEN], request });
+  assert.equal(result.streak, 2);
+  assert.equal('days' in result, false);
+});
+
+test('README replacement preserves manual text, supports CRLF and rejects duplicate or injected markers', () => {
+  const source = 'Before\r\n<!-- STATS:START -->\r\nPrevious\r\n<!-- STATS:END -->\r\nAfter';
+  assert.equal(replaceSections(source, { STATS: 'Verified' }), 'Before\r\n<!-- STATS:START -->\r\n\r\nVerified\r\n\r\n<!-- STATS:END -->\r\nAfter');
+  assert.throws(() => replaceSections(source + '\r\n<!-- STATS:START -->', { STATS: 'Verified' }), /duplicated README markers/);
+  assert.throws(() => replaceSections(source, { STATS: '<!-- LANGUAGES:START -->' }), /duplicated README markers/);
+});
+
+test('the update rejects bad markers before any request or file write', async t => {
+  const source = readme.replace('<!-- STATS:END -->', '');
+  const config = await fixture(t, source);
+  await assert.rejects(updateProfile({ ...config, request: async () => assert.fail('No API request expected') }), /README markers/);
+  assert.equal(await readFile(join(config.root, 'README.md'), 'utf8'), source);
+  assert.deepEqual(await readdir(config.root), ['README.md']);
+});
+
+test('a successful repeat refresh leaves files and timestamps identical', async t => {
+  const config = await fixture(t);
+  const first = await updateProfile(config);
+  assert.ok(first.changed > 0);
+  assert.deepEqual(first.failed, []);
+  assert.equal(first.model.lastSuccessfulAt, INSTANT);
+  assert.equal(first.model.activity.data.streak, 2);
+  assert.equal(first.model.stats.data.stars, 2);
+  assert.equal(first.model.recent.data[0].title, 'Improve accessible navigation');
+  const next = await updateProfile({ ...config, now: LATER });
+  assert.equal(next.changed, 0);
+  assert.deepEqual(next.model, first.model);
+  assert.match(await readFile(join(config.root, 'README.md'), 'utf8'), /Manual footer/);
+  await validateProfile(config.root, [TOKEN]);
+});
+
+test('a partial outage keeps the previous section date and complete refresh time', async t => {
+  const config = await fixture(t);
+  const first = await updateProfile(config);
+  const warnings = [];
+  const partial = await updateProfile({ ...config, now: LATER, request: mockRequest({ followers: 7, languagesOffline: true }), onWarning: message => warnings.push(message) });
+  assert.deepEqual(partial.failed, ['languages']);
+  assert.deepEqual(partial.model.languages, { ...first.model.languages, stale: true });
+  assert.equal(partial.model.lastSuccessfulAt, INSTANT);
+  assert.equal(partial.model.stats.observedAt, LATER);
+  assert.equal(partial.model.stats.data.followers, 7);
+  assert.match(warnings[0], /HTTP 503/);
+  assert.doesNotMatch(warnings.join('\n'), /unit-test-credential/);
+  await validateProfile(config.root, [TOKEN]);
+  const recovered = await updateProfile({ ...config, now: LATER, request: mockRequest({ followers: 7 }) });
+  assert.equal(recovered.model.languages.stale, false);
+  assert.equal(recovered.model.lastSuccessfulAt, LATER);
+});
+
+test('credential screening rejects direct and token-shaped leaks before writing output', async t => {
+  const config = await fixture(t);
+  await assert.rejects(updateProfile({ ...config, request: mockRequest({ badTitle: true }) }), /credential screening/);
+  assert.deepEqual(await readdir(config.root), ['README.md']);
+  assert.throws(() => assertSafeOutputs({ readme: `ghp_${'A'.repeat(36)}` }), /credential screening/);
 });

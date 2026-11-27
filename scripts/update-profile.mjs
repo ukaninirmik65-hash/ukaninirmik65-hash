@@ -1,457 +1,232 @@
-import { readFile, mkdir, writeFile, rename } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import {
+  currentStreak, dateKey, fetchActivity, fetchAllPages, fetchInventory, fetchLanguages,
+  integer, publicRequest, requestGitHub, validateCalendar,
+} from './profile-data.mjs';
+import { fetchProjects, fetchRecentActivity } from './profile-content.mjs';
+import { renderAssets, renderReadmeSections } from './profile-render.mjs';
 
-const API = 'https://api.github.com';
-const DAY = 86_400_000;
 const DEFAULT_USER = 'ukaninirmik65-hash';
-const palette = ['#17243A', '#165E63', '#22B8AD', '#22D3EE', '#A78BFA'];
-const dateKey = date => new Date(date).toISOString().slice(0, 10);
-const esc = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[char]));
-const num = value => new Intl.NumberFormat('en-US').format(value);
-const integer = value => Number.isSafeInteger(value) && value >= 0;
+const DEFAULT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const snapshotPath = 'assets/profile-data.json';
+const sectionNames = ['projects', 'stats', 'activity', 'languages', 'recent'];
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+const normalizedText = value => value?.replaceAll('\r\n', '\n');
+const isoDate = value => typeof value === 'string' && Number.isFinite(Date.parse(value))
+  && [new Date(value).toISOString(), dateKey(value)].includes(value);
 
-/** Never retry for longer than two seconds; a later scheduled run can recover. */
-export async function requestGitHub(url, { token, fetchImpl = fetch, sleep = pause, maxAttempts = 3, ...options } = {}) {
-  const target = new URL(url);
-  if (!['https://api.github.com', 'https://github.com'].includes(target.origin)) throw new Error('Untrusted GitHub API origin');
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    let response;
-    try {
-      response = await fetchImpl(url, {
-        ...options,
-        signal: AbortSignal.timeout(20_000),
-        headers: {
-          'User-Agent': 'Nirmik-Profile-Activity',
-          Accept: target.hostname === 'api.github.com' ? 'application/vnd.github+json' : 'text/html',
-          ...(target.hostname === 'api.github.com' ? { 'X-GitHub-Api-Version': '2022-11-28' } : {}),
-          ...(target.hostname === 'api.github.com' && token ? { Authorization: `Bearer ${token}` } : {}),
-          ...options.headers,
-        },
-      });
-    } catch {
-      if (attempt === maxAttempts - 1) throw new Error('GitHub connection failed after bounded retries');
-      await sleep(250 * 2 ** attempt);
-      continue;
-    }
-    if (response.ok) return response;
-    const limited = response.status === 429 || (response.status === 403 && (response.headers.get('x-ratelimit-remaining') === '0' || response.headers.has('retry-after')));
-    const retryable = limited || response.status >= 500;
-    const retrySeconds = Number(response.headers.get('retry-after') || 0);
-    if (!retryable || attempt === maxAttempts - 1 || retrySeconds > 2) throw new Error(`GitHub request failed (HTTP ${response.status})`);
-    await sleep(Math.max(retrySeconds * 1000, 250 * 2 ** attempt));
+const emptySection = () => ({ data: null, observedAt: null, stale: false });
+const savedSection = (data, observedAt, stale = false) => ({ data, observedAt, stale });
+
+function migrateSnapshot(previous, username) {
+  const empty = { version: 2, username, lastSuccessfulAt: null,
+    ...Object.fromEntries(sectionNames.map(name => [name, emptySection()])) };
+  if (!previous || previous.username?.toLowerCase() !== username.toLowerCase()) return empty;
+  if (previous.version === 2) return previous;
+  if (previous.version !== 1) throw new Error('Unsupported profile snapshot version');
+  const stats = { repositories: previous.totals?.total, stars: previous.totals?.stars, followers: previous.followers };
+  if (Object.values(stats).every(integer) && isoDate(previous.observedAt)) {
+    empty.stats = savedSection(stats, previous.observedAt, true);
   }
-  throw new Error('GitHub request failed');
-}
-
-export async function fetchAllPages(url, { request = requestGitHub } = {}) {
-  const items = [];
-  const seen = new Set();
-  let next = url;
-  while (next) {
-    const target = new URL(next);
-    if (target.origin !== API || seen.has(next)) throw new Error('Unsafe or circular API pagination');
-    seen.add(next);
-    const response = await request(next);
-    const page = await response.json();
-    if (!Array.isArray(page)) throw new Error('Expected a paginated repository array');
-    items.push(...page);
-    next = null;
-    for (const link of (response.headers.get('link') || '').split(',')) {
-      const match = link.match(/<([^>]+)>;\s*rel="next"/);
-      if (match) next = match[1];
+  const old = previous.contributions;
+  if (old?.source === 'public-calendar' && isoDate(old.to)) {
+    const { commits, pullRequests, reviews, issues } = old.metrics || {};
+    const counts = { commits, pullRequests, reviews, issues };
+    if (Object.values(counts).every(integer)) {
+      const days = validateCalendar(old.days, old);
+      empty.activity = savedSection({ from: old.from, to: old.to, counts,
+        streak: currentStreak(days, old.to), repositories: null }, old.to, true);
     }
   }
-  const ids = items.map(item => item.id);
-  if (new Set(ids).size !== ids.length) throw new Error('Repository pagination changed during collection; try again');
-  return items;
+  return empty;
 }
 
-/** Exact tooltip counts only: data-level is a color bucket, never a count. */
-export function parseContributionHTML(html, { from, to }) {
-  const attr = (tag, name) => tag.match(new RegExp(`\\b${name}="([^"]*)"`))?.[1];
-  const counts = new Map();
-  for (const match of html.matchAll(/<tool-tip\b([^>]*)>([\s\S]*?)<\/tool-tip>/g)) {
-    const content = match[2].replace(/<[^>]*>/g, '').trim();
-    const count = content.match(/^(No|[\d,]+) contributions? on /);
-    const id = attr(match[1], 'for');
-    if (id && count) counts.set(id, count[1] === 'No' ? 0 : Number(count[1].replaceAll(',', '')));
+export function replaceSections(readme, sections) {
+  const eol = readme.includes('\r\n') ? '\r\n' : '\n';
+  const lines = readme.split(eol);
+  let previousEnd = -1;
+  for (const [key, content] of Object.entries(sections)) {
+    const start = `<!-- ${key}:START -->`;
+    const end = `<!-- ${key}:END -->`;
+    const beginIndex = lines.indexOf(start);
+    const endIndex = lines.indexOf(end);
+    if (beginIndex <= previousEnd || endIndex <= beginIndex || lines.lastIndexOf(start) !== beginIndex
+      || lines.lastIndexOf(end) !== endIndex || /<!-- [A-Z_]+:(?:START|END) -->/.test(content)) {
+      throw new Error(`Invalid or duplicated README markers for ${key}`);
+    }
+    const replacement = ['', ...content.split('\n'), ''];
+    lines.splice(beginIndex + 1, endIndex - beginIndex - 1, ...replacement);
+    previousEnd = beginIndex + replacement.length + 1;
   }
-  const days = [];
-  for (const match of html.matchAll(/<td\b([^>]*)>/g)) {
-    const date = attr(match[1], 'data-date');
-    if (!date || date < from || date > to) continue;
-    const count = counts.get(attr(match[1], 'id'));
-    if (!integer(count)) throw new Error('Public calendar changed: exact contribution count is missing');
-    days.push({ date, count });
-  }
-  return validateCalendar({ source: 'public-calendar', from, to, days });
+  return lines.join(eol);
 }
 
-export function validateCalendar(calendar) {
-  const days = [...calendar.days].sort((a, b) => a.date.localeCompare(b.date));
-  const expected = Math.round((Date.parse(calendar.to) - Date.parse(calendar.from)) / DAY) + 1;
-  if (expected < 1 || days.length !== expected) throw new Error('Contribution calendar is incomplete');
-  for (let index = 0; index < days.length; index++) {
-    if (days[index].date !== dateKey(Date.parse(calendar.from) + index * DAY) || !integer(days[index].count)) throw new Error('Contribution dates or counts are invalid');
-  }
-  return { ...calendar, days, total: days.reduce((sum, day) => sum + day.count, 0) };
-}
-
-const graphQuery = `query ProfileActivity($login: String!, $from: DateTime!, $to: DateTime!) {
-  user(login: $login) { contributionsCollection(from: $from, to: $to) {
-    contributionCalendar { weeks { contributionDays { date contributionCount } } }
-    totalRepositoriesWithContributedCommits
-    commitContributionsByRepository(maxRepositories: 100) { repository { isPrivate } contributions { totalCount } }
-    pullRequestContributions(first: 100) { pageInfo { hasNextPage } nodes { isRestricted pullRequest { repository { isPrivate } } } }
-    issueContributions(first: 100) { pageInfo { hasNextPage } nodes { isRestricted issue { repository { isPrivate } } } }
-    pullRequestReviewContributions(first: 100) { pageInfo { hasNextPage } nodes { isRestricted pullRequestReview { pullRequest { repository { isPrivate } } } } }
-  } }
-}`;
-
-/** Metrics are counted only in explicitly public repositories. Truncated metrics are omitted. */
-export function normalizeGraphQL(payload, { from, to }) {
-  if (payload.errors?.length || !payload.data?.user?.contributionsCollection) throw new Error('Contribution API unavailable');
-  const collection = payload.data.user.contributionsCollection;
-  const days = collection.contributionCalendar.weeks.flatMap(week => week.contributionDays)
-    .filter(day => day.date >= from && day.date <= to).map(day => ({ date: day.date, count: day.contributionCount }));
-  const metrics = {};
-  if (integer(collection.totalRepositoriesWithContributedCommits) && collection.totalRepositoriesWithContributedCommits <= 100) {
-    if (!Array.isArray(collection.commitContributionsByRepository) || collection.commitContributionsByRepository.some(item => !integer(item.contributions?.totalCount))) throw new Error('Invalid public commit contribution counts');
-    metrics.commits = collection.commitContributionsByRepository.filter(item => item.repository?.isPrivate === false)
-      .reduce((sum, item) => sum + item.contributions.totalCount, 0);
-  }
-  const connections = [
-    ['pullRequests', collection.pullRequestContributions, node => node.pullRequest?.repository],
-    ['issues', collection.issueContributions, node => node.issue?.repository],
-    ['reviews', collection.pullRequestReviewContributions, node => node.pullRequestReview?.pullRequest?.repository],
-  ];
-  for (const [name, connection, repo] of connections) {
-    if (connection && connection.pageInfo?.hasNextPage === false) {
-      if (!Array.isArray(connection.nodes)) throw new Error('Invalid public contribution breakdown');
-      metrics[name] = connection.nodes.filter(node => !node.isRestricted && repo(node)?.isPrivate === false).length;
+function checkSnapshot(model) {
+  if (model.version !== 2 || !/^[a-z0-9-]{1,39}$/i.test(model.username)
+    || (model.lastSuccessfulAt !== null && !isoDate(model.lastSuccessfulAt))) throw new Error('Invalid profile snapshot');
+  for (const name of sectionNames) {
+    const section = model[name];
+    if (!section || typeof section.stale !== 'boolean'
+      || (section.data === null ? section.observedAt !== null || section.stale : !isoDate(section.observedAt))) {
+      throw new Error(`Invalid ${name} snapshot`);
     }
   }
-  return validateCalendar({ source: 'graphql', from, to, days, metrics });
 }
 
-export function summarizeRepositories(repositories) {
-  const publicRepos = repositories.filter(repo => !repo.private);
-  return {
-    total: publicRepos.length,
-    stars: publicRepos.reduce((sum, repo) => sum + repo.stargazers_count, 0),
-    forks: publicRepos.reduce((sum, repo) => sum + repo.forks_count, 0),
-    originals: publicRepos.filter(repo => !repo.fork).length,
-    active: publicRepos.filter(repo => !repo.archived).length,
-  };
-}
-
-export function calculateStreaks(days, today) {
-  const sorted = [...days].filter(day => day.date <= today).sort((a, b) => a.date.localeCompare(b.date));
-  let longest = 0;
-  let run = 0;
-  let previous;
-  for (const day of sorted) {
-    run = day.count > 0 ? (previous && Date.parse(day.date) - Date.parse(previous) === DAY ? run + 1 : 1) : 0;
-    longest = Math.max(longest, run);
-    previous = day.date;
+export function assertSafeOutputs(outputs, credentials = []) {
+  const tokenPattern = /\b(?:gh[pousr]_[a-z\d]{30,}|github_pat_[a-z\d_]{30,})\b/i;
+  for (const content of Object.values(outputs)) {
+    if (tokenPattern.test(content) || credentials.some(token => token?.length >= 8 && content.includes(token))) {
+      throw new Error('Generated content failed credential screening');
+    }
   }
-  const counts = new Map(sorted.map(day => [day.date, day.count]));
-  let cursor = today;
-  if (!counts.get(cursor)) cursor = dateKey(Date.parse(cursor) - DAY);
-  let current = 0;
-  while (counts.get(cursor) > 0) {
-    current++;
-    cursor = dateKey(Date.parse(cursor) - DAY);
-  }
-  return { current, longest };
 }
 
-export function buildModel({ user, repositories, languages, contributions, previous, today }) {
-  if (!integer(user.followers)) throw new Error('Follower count is unavailable');
-  if (previous?.username?.toLowerCase() !== user.login?.toLowerCase()) previous = null;
-  const publicRepos = repositories.filter(repo => !repo.private).sort((a, b) => a.name.localeCompare(b.name));
-  const repos = publicRepos.map(repo => {
-    if (![repo.stargazers_count, repo.forks_count].every(integer)) throw new Error('Invalid repository totals');
-    return {
-      name: repo.name,
-      description: typeof repo.description === 'string' ? repo.description : null,
-      url: `https://github.com/${user.login}/${encodeURIComponent(repo.name)}`,
-      stars: repo.stargazers_count,
-      forks: repo.forks_count,
-      fork: repo.fork,
-      archived: repo.archived,
-      pushedAt: repo.pushed_at?.slice(0, 10) || null,
-      language: repo.language || null,
-    };
-  });
-  const snapshot = { username: user.login, followers: user.followers, repositories: repos, totals: summarizeRepositories(publicRepos) };
-  const previousSnapshot = previous && Object.fromEntries(Object.keys(snapshot).map(key => [key, previous[key]]));
-  const observedAt = same(snapshot, previousSnapshot) ? previous.observedAt : today;
-  return {
-    version: 1,
-    ...snapshot,
-    observedAt,
-    languages: languages || previous?.languages || null,
-    contributions: contributions || previous?.contributions || null,
-  };
+function renderOutputs(readme, model) {
+  checkSnapshot(model);
+  const assets = Object.fromEntries(Object.entries(renderAssets(model)).map(([name, svg]) => [`assets/${name}`, svg]));
+  return { ...assets, 'README.md': replaceSections(readme, renderReadmeSections(model)),
+    [snapshotPath]: `${JSON.stringify(model, null, 2)}\n` };
 }
 
-function svg(width, height, title, description, content) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title desc"><title id="title">${esc(title)}</title><desc id="desc">${esc(description)}</desc><defs><linearGradient id="accent" x2="1" y2="1"><stop stop-color="#22D3EE"/><stop offset="1" stop-color="#A78BFA"/></linearGradient></defs><style>text{font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;fill:#F8FAFC}.muted{fill:#94A3B8}.cyan{fill:#22D3EE}.purple{fill:#A78BFA}.small{font-size:11px}.label{font-size:12px;fill:#94A3B8}.value{font-size:27px;font-weight:700}.title{font-size:20px;font-weight:700}</style><rect width="${width}" height="${height}" rx="20" fill="#0B1120"/><rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="19.5" fill="none" stroke="#233149"/>${content}</svg>\n`;
-}
-
-function txt(x, y, value, cls = '', extra = '') { return `<text x="${x}" y="${y}"${cls ? ` class="${cls}"` : ''}${extra ? ` ${extra}` : ''}>${esc(value)}</text>`; }
-function line(x1, y1, x2, y2) { return `<path d="M${x1} ${y1}H${x2}" stroke="#233149"/>`; }
-function monthSeries(calendar) {
-  return Array.from({ length: Number(calendar.to.slice(5, 7)) }, (_, index) => ({ label: new Date(Date.UTC(2020, index, 1)).toLocaleString('en-US', { month: 'short', timeZone: 'UTC' }), value: calendar.days.filter(day => Number(day.date.slice(5, 7)) === index + 1).reduce((sum, day) => sum + day.count, 0) }));
-}
-function weekSeries(calendar) {
-  const end = Date.parse(calendar.to);
-  return Array.from({ length: 8 }, (_, index) => {
-    const start = end - (7 - index) * 7 * DAY - 6 * DAY;
-    return { label: dateKey(start).slice(5), value: calendar.days.filter(day => Date.parse(day.date) >= start && Date.parse(day.date) <= start + 6 * DAY).reduce((sum, day) => sum + day.count, 0) };
-  });
-}
-function bars(series, x, y, width, height, labelEvery = 1) {
-  const max = Math.max(...series.map(item => item.value), 1);
-  const slot = width / series.length;
-  return series.map((item, index) => {
-    const h = item.value / max * height;
-    return `<g><title>${esc(item.label)}: ${item.value} contributions</title><rect x="${(x + index * slot + 3).toFixed(1)}" y="${(y + height - h).toFixed(1)}" width="${Math.max(slot - 8, 3).toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${index % 2 ? '#A78BFA' : '#22D3EE'}" opacity=".85"/>${txt(x + index * slot + slot / 2, y + height + 17, index % labelEvery === 0 ? item.label : '', 'muted small', 'text-anchor="middle"')}${item.value ? txt(x + index * slot + slot / 2, y + height - h - 5, num(item.value), 'small', 'text-anchor="middle"') : ''}</g>`;
-  }).join('') + line(x, y + height + 1, x + width, y + height + 1);
-}
-
-function latestRepositories(model, mobile = false) {
-  const width = mobile ? 420 : 900;
-  const repos = [...model.repositories]
-    .filter(repo => !repo.fork && !repo.archived && repo.name.toLowerCase() !== model.username.toLowerCase())
-    .sort((a, b) => (b.pushedAt || '').localeCompare(a.pushedAt || '') || a.name.localeCompare(b.name))
-    .slice(0, 6);
-  const columns = mobile ? 1 : 2;
-  const cardWidth = mobile ? 364 : 414;
-  const cardHeight = 128;
-  const height = 98 + Math.ceil(repos.length / columns) * (cardHeight + 14) + 26;
-  let c = txt(28, 38, 'Latest repository updates', 'title') + txt(28, 62, `Recently updated original public repositories · snapshot ${model.observedAt}`, 'label');
-  c += `<rect x="28" y="78" width="52" height="3" rx="1.5" fill="url(#accent)"/>`;
-  repos.forEach((repo, index) => {
-    const column = index % columns;
-    const row = Math.floor(index / columns);
-    const x = mobile ? 28 : 28 + column * 430;
-    const y = 98 + row * (cardHeight + 14);
-    const name = repo.name.length > (mobile ? 31 : 33) ? `${repo.name.slice(0, mobile ? 29 : 31)}…` : repo.name;
-    const description = repo.description || 'No description provided.';
-    const shortDescription = description.length > (mobile ? 53 : 67) ? `${description.slice(0, mobile ? 51 : 65)}…` : description;
-    c += `<a href="${esc(repo.url)}"><rect x="${x}" y="${y}" width="${cardWidth}" height="${cardHeight}" rx="14" fill="#101B2E" stroke="${index % 2 ? '#A78BFA' : '#22D3EE'}" stroke-opacity=".62"/><rect x="${x}" y="${y}" width="5" height="${cardHeight}" rx="2.5" fill="${index % 2 ? '#A78BFA' : '#22D3EE'}"/><title>${esc(`${repo.name} · open repository`)}</title></a>`;
-    c += txt(x + 20, y + 30, name, 'value', 'font-size="17"') + txt(x + 20, y + 53, shortDescription, 'muted small');
-    c += txt(x + 20, y + 84, repo.language || 'Language not detected', 'cyan small') + txt(x + 156, y + 84, `★ ${num(repo.stars)}`, 'small') + txt(x + 214, y + 84, `⑂ ${num(repo.forks)}`, 'small');
-    c += txt(x + 20, y + 108, `Updated ${repo.pushedAt || 'date unavailable'}`, 'muted small') + txt(x + cardWidth - 18, y + 108, 'View ↗', index % 2 ? 'purple small' : 'cyan small', 'text-anchor="end"');
-  });
-  if (!repos.length) c += txt(28, 122, 'No original public repositories are available yet.', 'label');
-  return svg(width, height, 'Latest repository updates', 'Recently updated original public GitHub repositories showing descriptions, primary languages, stars, forks, and push dates. Repository links are also provided beneath this image in the profile README.', c);
-}
-
-function githubStatistics(model, mobile = false) {
-  const width = mobile ? 420 : 900;
-  const calendar = model.contributions;
-  const metrics = [['Public repositories', model.totals.total], ['Stars received', model.totals.stars], ['Forks received', model.totals.forks], ['Followers', model.followers]];
-  if (calendar) metrics.push(['Contributions · YTD', calendar.total]);
-  for (const [key, label] of [['commits', 'Public commits · YTD'], ['pullRequests', 'Pull requests · YTD'], ['issues', 'Issues · YTD'], ['reviews', 'Code reviews · YTD']]) {
-    if (integer(calendar?.metrics?.[key])) metrics.push([label, calendar.metrics[key]]);
-  }
-  const columns = mobile ? 2 : 4;
-  const rows = Math.ceil(metrics.length / columns);
-  const height = 96 + rows * 78;
-  let c = txt(28, 38, 'GitHub statistics', 'title') + txt(28, 62, `Public account data · snapshot ${model.observedAt}`, 'label');
-  c += `<rect x="28" y="78" width="42" height="3" rx="1.5" fill="url(#accent)"/>`;
-  metrics.forEach(([label, value], index) => {
-    const column = index % columns;
-    const row = Math.floor(index / columns);
-    const x = 28 + column * (mobile ? 184 : 215);
-    const y = 118 + row * 78;
-    c += txt(x, y, num(value), index === 4 ? 'value cyan' : 'value') + txt(x, y + 21, label, 'label');
-  });
-  return svg(width, height, 'GitHub statistics', 'Public repositories, received stars and forks, followers, and available public contribution metrics. These numbers are generated from GitHub data.', c);
-}
-
-export function renderLatestRepositoryLinks(model) {
-  const repos = [...model.repositories]
-    .filter(repo => !repo.fork && !repo.archived && repo.name.toLowerCase() !== model.username.toLowerCase())
-    .sort((a, b) => (b.pushedAt || '').localeCompare(a.pushedAt || '') || a.name.localeCompare(b.name))
-    .slice(0, 6);
-  return repos.map(repo => `- [**${repo.name}**](${repo.url}) · ${repo.language || 'Language not detected'} · ★ ${repo.stars} · forks ${repo.forks} · updated ${repo.pushedAt || 'date unavailable'}`).join('\n');
-}
-
-function graph(model, mobile = false) {
-  const calendar = model.contributions;
-  if (!calendar) return svg(900, 140, 'Contribution calendar unavailable', 'The contribution API did not return reliable data.', txt(28, 50, 'Contribution calendar unavailable', 'title') + txt(28, 85, 'A later successful refresh will populate this panel.', 'label'));
-  const width = mobile ? 420 : 900;
-  const startWeekday = new Date(calendar.from + 'T00:00:00Z').getUTCDay();
-  const weeks = Math.ceil((calendar.days.length + startWeekday) / 7);
-  const columns = mobile ? 27 : 53;
-  const panels = Math.ceil(weeks / columns);
-  const cell = mobile ? 11 : 12;
-  const step = mobile ? 13 : 15;
-  const panelHeight = 130;
-  const height = 118 + panels * panelHeight;
-  const max = Math.max(...calendar.days.map(day => day.count), 1);
-  let c = txt(28, 38, `${calendar.from.slice(0, 4)} contribution history`, 'title') + txt(28, 62, `${num(calendar.total)} contributions · ${calendar.from} → ${calendar.to}`, 'label');
-  for (let panel = 0; panel < panels; panel++) {
-    const top = 102 + panel * panelHeight;
-    c += txt(27, top + step + 9, 'M', 'muted small') + txt(27, top + step * 3 + 9, 'W', 'muted small') + txt(27, top + step * 5 + 9, 'F', 'muted small');
-    let previousMonth = -1;
-    calendar.days.forEach((day, index) => {
-      const week = Math.floor((index + startWeekday) / 7);
-      if (Math.floor(week / columns) !== panel) return;
-      const column = week % columns;
-      const weekday = (index + startWeekday) % 7;
-      const x = 48 + column * step;
-      const y = top + weekday * step;
-      const bucket = day.count === 0 ? 0 : Math.min(4, 1 + Math.floor((day.count - 1) / Math.max(1, max / 4)));
-      c += `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="2" fill="${palette[bucket]}"><title>${day.date}: ${num(day.count)} contributions</title></rect>`;
-      const month = Number(day.date.slice(5, 7));
-      if ((day.date.endsWith('-01') || (index === 0 && panel === 0)) && month !== previousMonth) {
-        c += txt(x, top - 10, new Date(day.date + 'T00:00:00Z').toLocaleString('en-US', { month: 'short', timeZone: 'UTC' }), 'muted small');
-        previousMonth = month;
-      }
-    });
-  }
-  const bottom = height - 24;
-  c += txt(28, bottom, 'Public GitHub calendar', 'muted small');
-  c += txt(width - 162, bottom, 'Less', 'muted small');
-  palette.forEach((fill, i) => { c += `<rect x="${width - 130 + i * 15}" y="${bottom - 10}" width="11" height="11" rx="2" fill="${fill}"/>`; });
-  c += txt(width - 23, bottom, 'More', 'muted small', 'text-anchor="end"');
-  return svg(width, height, `${calendar.from.slice(0, 4)} contribution calendar for ${model.username}`, 'Exact publicly displayed GitHub daily contribution counts. Colors indicate relative intensity. GitHub’s native profile is authoritative; no private repository details are collected.', c);
-}
-
-function languageCard(model, mobile = false) {
-  const width = mobile ? 420 : 900;
-  const height = mobile ? 440 : 260;
-  const languageData = model.languages;
-  const entries = Object.entries(languageData?.bytes || {}).filter(([, value]) => value > 0).sort((a, b) => b[1] - a[1]);
-  const total = entries.reduce((sum, [, bytes]) => sum + bytes, 0);
-  const colors = ['#22D3EE', '#A78BFA', '#34D399', '#60A5FA', '#FBBF24', '#F472B6'];
-  let c = txt(28, 38, 'Code & consistency', 'title') + txt(28, 63, 'Language composition · original public repositories', 'label');
-  if (total) {
-    let cursor = 28;
-    const barWidth = mobile ? 364 : 480;
-    entries.forEach(([, bytes], index) => {
-      const w = bytes / total * barWidth;
-      c += `<rect x="${cursor.toFixed(2)}" y="88" width="${w.toFixed(2)}" height="9" fill="${colors[index % colors.length]}"/>`;
-      cursor += w;
-    });
-    entries.slice(0, 6).forEach(([name, bytes], index) => {
-      const x = 28 + index % 2 * (mobile ? 182 : 242);
-      const y = 126 + Math.floor(index / 2) * 26;
-      c += `<circle cx="${x + 4}" cy="${y - 4}" r="4" fill="${colors[index % colors.length]}"/>` + txt(x + 15, y, `${name} ${(bytes / total * 100).toFixed(1)}%`, 'small');
-    });
-    c += txt(28, mobile ? 222 : 219, `GitHub language bytes · excludes forks · snapshot ${languageData.observedAt}`, 'muted small');
-  } else c += txt(28, 110, 'Language API unavailable · previous data retained when available', 'label');
-  const sx = mobile ? 28 : 570;
-  const sy = mobile ? 276 : 105;
-  if (model.contributions) {
-    const streak = calculateStreaks(model.contributions.days, model.contributions.to);
-    c += txt(sx, sy, `${streak.current} days`, 'value cyan') + txt(sx, sy + 23, 'Current contribution streak', 'label');
-    c += txt(sx, sy + 73, `${streak.longest} days`, 'value purple') + txt(sx, sy + 96, 'Longest streak · calendar year', 'label');
-    c += txt(sx, sy + 122, `Through ${model.contributions.to} · UTC calendar dates`, 'muted small');
-  }
-  return svg(width, height, 'Public repository languages and contribution streaks', 'Language percentages measure GitHub repository source bytes, not proficiency. Current streak includes yesterday when today is still in progress. Both streaks are limited to the displayed calendar year.', c);
-}
-
-export function renderAssets(model) {
-  return {
-    'latest-repositories.svg': latestRepositories(model),
-    'latest-repositories-mobile.svg': latestRepositories(model, true),
-    'github-statistics.svg': githubStatistics(model),
-    'github-statistics-mobile.svg': githubStatistics(model, true),
-    'contribution-graph.svg': graph(model),
-    'contribution-graph-mobile.svg': graph(model, true),
-    'github-languages.svg': languageCard(model),
-    'github-languages-mobile.svg': languageCard(model, true),
-  };
-}
-
-async function readJSON(filename) {
-  try { return JSON.parse(await readFile(filename, 'utf8')); } catch (error) { if (error.code === 'ENOENT') return null; throw error; }
-}
-async function writeChanged(filename, content) {
-  let old;
-  try { old = await readFile(filename, 'utf8'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
-  if (old === content) return false;
-  const temporary = filename + '.tmp';
-  await writeFile(temporary, content, 'utf8');
-  await rename(temporary, filename);
-  return true;
-}
-
-async function updateLatestRepositoryLinks(root, model) {
-  const filename = path.join(root, 'README.md');
-  let readme;
-  try { readme = await readFile(filename, 'utf8'); } catch (error) { if (error.code === 'ENOENT') return false; throw error; }
-  const start = '<!-- LATEST_REPOSITORIES:START -->';
-  const end = '<!-- LATEST_REPOSITORIES:END -->';
-  const begin = readme.indexOf(start);
-  const finish = readme.indexOf(end);
-  if (begin === -1 || finish === -1 || finish <= begin) throw new Error('Latest repository markers are missing from README');
-  const replacement = `${start}\n${renderLatestRepositoryLinks(model)}\n${end}`;
-  return writeChanged(filename, readme.slice(0, begin) + replacement + readme.slice(finish + end.length));
-}
-
-export async function updateProfile({ username = DEFAULT_USER, root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'), today = dateKey(new Date()), token, request } = {}) {
-  if (!/^[a-zA-Z0-9-]{1,39}$/.test(username)) throw new Error('Invalid GitHub username');
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(today) || dateKey(today) !== today) throw new Error('Invalid snapshot date');
-  const from = today.slice(0, 4) + '-01-01';
-  const assetDir = path.join(root, 'assets');
-  const previous = await readJSON(path.join(assetDir, 'profile-data.json'));
-  const get = request || ((url, options = {}) => requestGitHub(url, { token, ...options }));
-  // Required REST calls finish and validate before any existing output is touched.
-  const user = await (await get(`${API}/users/${username}`)).json();
-  const repositories = await fetchAllPages(`${API}/users/${username}/repos?type=owner&per_page=100&sort=full_name`, { request: get });
-  if (user.login?.toLowerCase() !== username.toLowerCase() || !integer(user.public_repos) || repositories.length !== user.public_repos) throw new Error('Repository count changed or public inventory is incomplete; retry later');
-  let languages = null;
+async function readOptional(filename) {
   try {
-    const bytes = {};
-    for (const repo of repositories.filter(repo => !repo.fork && !repo.private)) {
-      const result = await (await get(`${API}/repos/${username}/${encodeURIComponent(repo.name)}/languages`)).json();
-      if (!result || Array.isArray(result) || Object.values(result).some(value => !integer(value))) throw new Error('Invalid language response');
-      for (const [name, value] of Object.entries(result)) bytes[name] = (bytes[name] || 0) + value;
-    }
-    const sortedBytes = Object.fromEntries(Object.entries(bytes).sort(([a], [b]) => a.localeCompare(b)));
-    languages = { bytes: sortedBytes, observedAt: same(sortedBytes, previous?.languages?.bytes) ? previous.languages.observedAt : today };
-  } catch { console.warn('Language data unavailable; keeping the last successful language snapshot.'); }
-  let contributions = null;
-  try {
-    const html = await (await get(`https://github.com/users/${username}/contributions?from=${from}&to=${today}`)).text();
-    contributions = parseContributionHTML(html, { from, to: today });
-  } catch { console.warn('Public contribution calendar unavailable; keeping the last successful calendar snapshot.'); }
-  if (token && contributions) {
-    try {
-      const payload = await (await get(`${API}/graphql`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: graphQuery, variables: { login: username, from: from + 'T00:00:00Z', to: today + 'T23:59:59Z' } }) })).json();
-      const authenticated = normalizeGraphQL(payload, { from, to: today });
-      // Do not publish any token-only calendar counts. Public calendar remains authoritative.
-      if (same(authenticated.days, contributions.days)) contributions.metrics = authenticated.metrics;
-      else console.warn('Authenticated and public calendar scope differs; publishing public calendar only.');
-    } catch { console.warn('Public GraphQL breakdown unavailable; optional commit, PR, issue and review counts omitted.'); }
-  }
-  const model = buildModel({ user, repositories, languages, contributions, previous, today });
-  // Render everything before writing; a render failure preserves previous assets.
-  const outputs = { ...renderAssets(model), 'profile-data.json': JSON.stringify(model, null, 2) + '\n' };
-  await mkdir(assetDir, { recursive: true });
-  let changed = 0;
-  for (const [filename, content] of Object.entries(outputs)) if (await writeChanged(path.join(assetDir, filename), content)) changed++;
-  if (await updateLatestRepositoryLinks(root, model)) changed++;
-  console.log(`Public profile refreshed: ${repositories.length} repositories; ${changed} changed assets.`);
-  return { model, changed };
-}
-
-export async function main() {
-  try {
-    await updateProfile({ username: process.env.PROFILE_USERNAME || DEFAULT_USER, token: process.env.PROFILE_TOKEN || process.env.GITHUB_TOKEN });
+    return await readFile(filename, 'utf8');
   } catch (error) {
-    // All API errors are deliberately sanitized; tokens and response bodies are never logged.
-    console.error(`Profile refresh stopped: ${error.message}`);
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
+async function publishOutputs(root, outputs) {
+  const suffix = `.${randomUUID()}.tmp`;
+  const pending = [];
+  try {
+    for (const [name, content] of Object.entries(outputs)) {
+      const filename = path.join(root, name);
+      const original = await readOptional(filename);
+      if (normalizedText(original) === normalizedText(content)) continue;
+      const temporary = filename + suffix;
+      pending.push({ filename, temporary, original, written: false });
+      await mkdir(path.dirname(filename), { recursive: true });
+      await writeFile(temporary, content, { encoding: 'utf8', flag: 'wx' });
+    }
+    for (const item of pending) {
+      await rename(item.temporary, item.filename);
+      item.written = true;
+    }
+  } catch (error) {
+    for (const item of pending.filter(entry => entry.written)) {
+      if (item.original === null) await rm(item.filename, { force: true });
+      else {
+        await writeFile(item.temporary, item.original, 'utf8');
+        await rename(item.temporary, item.filename);
+      }
+    }
+    throw error;
+  } finally {
+    await Promise.all(pending.map(item => rm(item.temporary, { force: true })));
+  }
+  return pending.length;
+}
+
+function legacyRepositoryLinks(previous, recent, today) {
+  const data = previous.activity.data;
+  if (!data || data.repositories !== null || data.to.slice(0, 4) !== today.slice(0, 4) || !recent.data) return previous.activity;
+  const repos = new Map();
+  for (const entry of recent.data) {
+    if (entry.date < data.from || entry.date > data.to || !['Commit', 'Pull request', 'Issue'].includes(entry.kind)) continue;
+    repos.set(entry.repo, { name: entry.repo, url: `https://github.com/${entry.repo}` });
+  }
+  return repos.size ? { ...previous.activity, data: { ...data, repositories: [...repos.values()] } } : previous.activity;
+}
+
+export async function updateProfile({
+  username = DEFAULT_USER, root = DEFAULT_ROOT, now = new Date(), token, profileToken, request, fetchImpl = fetch,
+  onWarning = console.warn,
+} = {}) {
+  if (!/^[a-z0-9-]{1,39}$/i.test(username)) throw new Error('Invalid GitHub username');
+  const instant = new Date(now).toISOString();
+  const today = dateKey(instant);
+  const period = { from: `${today.slice(0, 4)}-01-01`, to: today };
+  const readme = await readFile(path.join(root, 'README.md'), 'utf8');
+  const stored = JSON.parse(await readOptional(path.join(root, snapshotPath)) || 'null');
+  const previous = migrateSnapshot(stored, username);
+  checkSnapshot(previous);
+  // Check all markers before making any API requests or modifying generated output.
+  replaceSections(readme, renderReadmeSections(previous));
+  const tokens = [...new Set([token, profileToken].filter(Boolean))];
+  const get = request || publicRequest(token, fetchImpl);
+  const graph = request || ((url, options) => requestGitHub(url, { fetchImpl, ...options }));
+  const inventory = fetchInventory(username, get);
+  const failed = [];
+
+  async function section(name, load) {
+    try {
+      const data = await load();
+      const unchanged = same(data, previous[name].data);
+      return savedSection(data, unchanged ? previous[name].observedAt : instant);
+    } catch (error) {
+      failed.push(name);
+      const status = integer(error?.status) ? ` (HTTP ${error.status}${error.rateLimited ? ', rate limited' : ''})` : '';
+      const graphErrors = [
+        'GitHub GraphQL credentials are missing', 'Invalid GitHub GraphQL contribution response',
+        'Incomplete GraphQL contribution breakdown', 'GraphQL and anonymous contribution dates or counts differ',
+      ];
+      const reason = name === 'activity' && graphErrors.includes(error?.message) ? ` ${error.message}.` : '';
+      onWarning(`Profile ${name} could not refresh${status}.${reason} Preserving verified data where available.`);
+      return { ...previous[name], stale: previous[name].data !== null };
+    }
+  }
+
+  const [projects, stats, fetchedActivity, languages, recent] = await Promise.all([
+    section('projects', async () => fetchProjects({ username, repositories: (await inventory).repositories, request: get,
+      fetchImpl, previousProjects: previous.projects.data || [], onWarning })),
+    section('stats', async () => (await inventory).stats),
+    section('activity', () => fetchActivity({ username, period, now: instant, tokens, request: graph })),
+    section('languages', async () => fetchLanguages(username, (await inventory).repositories, get)),
+    section('recent', async () => fetchRecentActivity({ username, repositories: (await inventory).repositories,
+      request: get, fetchAllPages, now: instant })),
+  ]);
+  const activity = stored?.version === 1 && fetchedActivity.stale ? legacyRepositoryLinks(previous, recent, today) : fetchedActivity;
+  const model = { version: 2, username, lastSuccessfulAt: previous.lastSuccessfulAt, projects, stats, activity, languages, recent };
+  if (!failed.length && (!model.lastSuccessfulAt || sectionNames.some(name => !same(model[name], previous[name])))) {
+    model.lastSuccessfulAt = instant;
+  }
+  const outputs = renderOutputs(readme, model);
+  assertSafeOutputs(outputs, tokens);
+  const changed = await publishOutputs(root, outputs);
+  return { model, changed, failed: sectionNames.filter(name => failed.includes(name)) };
+}
+
+export async function validateProfile(root = DEFAULT_ROOT, credentials = []) {
+  const readme = await readFile(path.join(root, 'README.md'), 'utf8');
+  const model = JSON.parse(await readFile(path.join(root, snapshotPath), 'utf8'));
+  const expected = renderOutputs(readme, model);
+  assertSafeOutputs(expected, credentials);
+  for (const [filename, content] of Object.entries(expected)) {
+    const actual = await readFile(path.join(root, filename), 'utf8');
+    if (normalizedText(actual) !== normalizedText(content)) throw new Error(`Generated ${filename} is out of sync`);
+  }
+}
+
+async function main() {
+  const { GITHUB_TOKEN: token, PROFILE_TOKEN: profileToken, PROFILE_USERNAME: username } = process.env;
+  try {
+    if (process.argv[2] === '--validate') {
+      await validateProfile(DEFAULT_ROOT, [token, profileToken]);
+      console.log('README markers and generated assets match the public snapshot.');
+      return;
+    }
+    const { changed, failed } = await updateProfile({ username, token, profileToken });
+    console.log(`Profile update produced ${changed} file change(s). ${failed.length} section(s) could not refresh.`);
+    if (failed.length) process.exitCode = 2;
+  } catch {
+    // An unexpected exception may contain a remote response fragment or credential.
+    console.error('Profile update stopped. Check local files, README markers, and generated snapshot consistency.');
     process.exitCode = 1;
   }
 }

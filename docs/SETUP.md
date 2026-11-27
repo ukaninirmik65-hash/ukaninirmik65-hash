@@ -1,83 +1,60 @@
-# Profile activity setup
+# Profile automation
 
-The README's analytics are generated in this repository with Node.js 24, GitHub's REST and GraphQL APIs, and the public contribution calendar. There are no npm dependencies, paid services, or third-party statistics servers. The committed SVGs remain available between refreshes.
+The profile README is generated in this repository with Node.js 24 and the official GitHub REST and GraphQL APIs. The generator validates and normalizes the public API data, calculates metrics, and renders Markdown and local SVGs. The committed JSON snapshot and SVGs keep the profile readable between updates.
 
-## Enable automatic refreshes
+## Enable automatic updates
 
-1. Keep this repository public and named `ukaninirmik65-hash/ukaninirmik65-hash`, with `main` as its default branch.
-2. In **Settings → Actions → General**, allow GitHub Actions to run. The workflow requests `contents: write` only for its refresh job. Organization policy or branch rules may still restrict writes.
-3. Open **Actions → Update profile activity → Run workflow** and select `main` for the initial run.
-4. Confirm that the run succeeds and inspect any warnings in **Fetch public activity and render SVGs**. The commit step creates a commit only when the generated content changed.
+1. In the profile repository, allow GitHub Actions under **Settings → Actions → General**.
+2. Open **Actions → Update profile activity → Run workflow**, select the default branch (`main`), and start the first refresh.
+3. Check the run's result and the generated profile. A pass means the data and output validation completed. A failed run's log identifies the source or publish step that needs attention.
 
-**No repository secret is required for the normal setup.** The built-in `GITHUB_TOKEN` reads public data and pushes the generated files. Checkout does not persist credentials; the push uses a temporary askpass script removed when the step exits. Tokens are never written into the data snapshot or SVGs.
+**Permissions.** The verification job uses `contents: read` and receives no profile data credential. Only the default-branch refresh job requests `contents: write`. Its built-in `GITHUB_TOKEN` is used for the normal API requests and for pushing generated files. Checkout leaves Git credentials unpersisted, and the push uses a temporary Git askpass helper that is removed on exit.
 
-If a repository policy prevents GraphQL access, the generator can still use exact daily counts from GitHub's public contribution calendar. It omits unavailable contribution-type metrics. An optional repository Actions secret named `PROFILE_TOKEN` can supply a fine-grained personal access token with access only to this public profile repository and read-only public metadata. Do not grant access to private repositories for this dashboard. The workflow continues to push with its own `GITHUB_TOKEN`, so this optional token needs no write permission. A token lacking the requested read access will produce a warning and use the public fallback.
+**Optional GraphQL credential.** Try the built-in token first. If the workflow log indicates that GitHub's repository-scoped token cannot read the required public contribution data, create a fine-grained personal access token with resource owner `ukaninirmik65-hash`, limited to the public profile repository, with the automatically granted **Metadata: read-only** permission. Give it an expiration date and add it under **Settings → Secrets and variables → Actions → New repository secret** as `PROFILE_TOKEN`. Fine-grained tokens include access to public resources. Keep the token's selection limited to public data. The optional token is for GraphQL reads, while generated commits use `GITHUB_TOKEN`. [GraphQL authentication](https://docs.github.com/en/graphql/guides/forming-calls-with-graphql) · [Actions token scope](https://docs.github.com/en/actions/concepts/security/github_token)
 
-If branch protection rejects automated pushes, allow this workflow's bot through the applicable rule, or adapt the workflow to open a pull request. Do not weaken unrelated branch protections. No pull-request approval permission is required by the supplied workflow.
+## Refresh schedule
 
-## When data changes
+- Scheduled refreshes start at **00:23, 06:23, 12:23, and 18:23 UTC** (**05:53, 11:53, 17:53, and 23:53 Asia/Colombo**). GitHub may delay scheduled runs and may disable schedules after extended inactivity in a public repository. [Workflow events](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows)
+- Manual dispatch, a relevant push to `main`, a new star, and a fork can trigger a refresh. Pull requests and manual dispatches on other branches run offline verification with read-only permissions.
+- The profile repository cannot receive ordinary push events from other repositories. Scheduled runs pick up those updates. For an immediate cross-repository refresh, an authorized caller can send a `repository_dispatch` event with `event_type` set to `profile-update` to `POST /repos/ukaninirmik65-hash/ukaninirmik65-hash/dispatches`. No cross-repository credential is needed for the scheduled refresh. [Repository dispatch permissions](https://docs.github.com/en/rest/repos/repos#create-a-repository-dispatch-event)
 
-The refresh runs daily at **03:23 UTC / 08:53 Asia/Colombo**, on manual dispatch, and when this repository receives a star, is forked, or has a change to its generator, tests, package file, or workflow on `main`. GitHub may delay scheduled jobs. Scheduled workflows in inactive public repositories may be disabled by GitHub; re-enable the workflow in Actions if necessary.
+Default-branch refreshes serialize through a workflow concurrency group. Generated commits use a fast-forward-only push, so concurrent maintainer changes remain intact. Rerun a job after a non-fast-forward rejection so the generator can start from the new default-branch tip. Automated commits do not trigger another refresh.
 
-GitHub does not send another repository's push, star, or fork event to a profile repository's workflow. Activity across the account is picked up by the daily refresh. For an immediate refresh, use **Run workflow**, or send this repository a `repository_dispatch` event with `event_type` set to `profile-update`. For example, an authorized caller can POST to:
+## Data and calculations
 
-```text
-https://api.github.com/repos/ukaninirmik65-hash/ukaninirmik65-hash/dispatches
-```
+| Section | Source and scope |
+| --- | --- |
+| Featured Projects | Curated projects retain their documented descriptions and technologies. GitHub REST supplies canonical names, primary languages, stars, forks, and the most recent meaningful default-branch commit. Extra slots can show an original, active public repository with a description and either a `featured` topic or both a star and a detected language. The profile repository, archived repositories, forks, and the previously excluded `demo` and `motiwalaperfumes-clone` repositories are ineligible for automatic selection. Demo links use verified public deployment URLs. |
+| GitHub Analytics | GitHub REST returns the public follower count and the paginated list of repositories owned by this account. Repository and star totals include the profile repository. Contribution counts are for the displayed UTC year-to-date period. |
+| Development Activity Overview | GraphQL `contributionsCollection` returns commit, pull request, review, and issue contribution counts for the current UTC calendar year. The generator verifies that the repository groups reconcile to the API's totals before deriving the public subset. Each category's share is its count divided by the sum of the four public counts. The radar spans 0% at the center to 100% at the end of each axis. |
+| Contribution streak | The generator verifies the signed-out GitHub profile calendar against GraphQL's daily data. A credential with broader visibility can still produce a streak using only the dates and counts GitHub already shows on the signed-out profile. This public view may include GitHub's anonymized counts if the account has enabled them. A streak that reached yesterday remains current while today's count is still zero. Individual dates and counts stay out of the saved snapshot and SVGs. |
+| Programming Language Distribution | GitHub's repository languages endpoint returns source-code bytes. Each share divides a language's aggregate bytes by the total included bytes. The sample measures source code, including public practice projects. |
+| Recent Development Activity | The public events feed supplies commits, pull requests, issues, and releases where available. If the feed yields fewer than five verified entries, the generator looks for attributed default-branch commits within the last 90 days across up to eight recently pushed original public repositories. GitHub's feed keeps up to 300 events over 30 days and may lag up to six hours. |
 
-with this JSON body:
+Recent activity excludes automated profile updates, bots, and duplicates. Featured project source and deployment evidence is recorded separately. [Project verification](PROJECT-VERIFICATION.md) · [GitHub public events](https://docs.github.com/en/rest/activity/events) · [Contribution collection](https://docs.github.com/en/graphql/reference/users#contributionscollection)
 
-```json
-{"event_type":"profile-update"}
-```
+### Language distribution
 
-The caller needs permission to dispatch to this repository. Keep that credential in the caller's Actions secret, never in a README, URL, or committed file. No cross-repository dispatch credential is needed for daily updates.
+The sample includes source bytes from original, active public repositories, including public practice projects. It excludes forks, archived and disabled repositories, and the profile automation repository. Empty language responses contribute zero bytes. [Repository language data](https://docs.github.com/en/rest/repos/repos#list-repository-languages)
 
-## What the charts mean
+## Local development
 
-- Public repository, star, and fork totals include all pages of the account's owned public repositories. A repository's received stars and forks are counted once. Followers come from the public user API.
-- Languages show GitHub-reported source-code **bytes**, summed over original public repositories. They describe repository contents, not skill level or time spent coding.
-- Contributions and the calendar cover the displayed UTC calendar year through the fetched date. Daily counts reproduce the publicly visible GitHub calendar. If the account has enabled anonymous private contribution counts on its public profile, GitHub may include those counts. The generator collects no private repository details and never publishes additional token-only calendar activity. GitHub's native profile graph remains authoritative.
-- Monthly and weekly charts aggregate those same daily counts. The current month and week can be incomplete. Repository activity is labeled using repository push dates; it is not a count of commits.
-- Contribution-type counts are shown only when the API can reliably establish their public scope. An unavailable metric is omitted rather than replaced with zero.
-- A contribution streak means consecutive calendar days with at least one contribution. Today's zero does not break a streak that was active yesterday. The longest streak is limited to the displayed calendar year.
-- The source and data dates are embedded in generated assets. If optional data cannot be refreshed, retained data keeps its original date so its age remains visible. A failed required REST fetch leaves the last successful assets intact and fails the workflow.
-
-## Local commands
-
-With Node.js 24 installed:
+Use Node.js 24. There are no third-party npm dependencies to install.
 
 ```sh
 npm test
 npm run update
+npm run validate
 ```
 
-An authenticated run can read `GITHUB_TOKEN` from the current process environment. Never paste a token into a committed script. An unauthenticated run is suitable for initial generation and uses GitHub's lower public API rate limit. The generator uses bounded retries for temporary failures and preserves successful assets when required data cannot be fetched.
+`npm test` and `npm run validate` are offline. `npm run update` accepts the API credentials from the process environment. Set `GITHUB_TOKEN` for authenticated REST and GraphQL calls, or `PROFILE_TOKEN` for GraphQL. An unauthenticated run can update the public REST data under GitHub's lower rate limit. Never store API credentials in tracked files.
 
-## Generated files
+Generated output is limited to `assets/profile-data.json`, `assets/activity-overview.svg`, `assets/language-distribution.svg`, and the named comment blocks in `README.md`. Keep personal, experience, and contact edits outside those generated blocks. The workflow validates the complete generated output before staging its allowlist, and creates a commit only when those files change.
 
-The updater owns only these files:
+The README timestamp shows when the complete saved snapshot was last updated. Successful checks that produce the same saved data keep the displayed timestamp and file contents. Actions records the result and time of each check.
 
-```text
-assets/profile-data.json
-assets/latest-repositories.svg
-assets/latest-repositories-mobile.svg
-assets/github-statistics.svg
-assets/github-statistics-mobile.svg
-assets/contribution-graph.svg
-assets/contribution-graph-mobile.svg
-assets/github-languages.svg
-assets/github-languages-mobile.svg
-```
+## Recovery and limitations
 
-The updater also refreshes the `LATEST_REPOSITORIES` block in `README.md`, so every displayed repository has a direct GitHub link. Desktop and mobile variants use the same underlying data. The README's `<picture>` elements select the appropriate variant. The JSON snapshot stores sanitized public data so that the source and calculations can be reviewed. It contains no credentials.
-
-The workflow stages only this allowlist. Deterministic rendering and change detection avoid commits caused solely by a new run time. A new contribution date, changed public count, or changed repository data can legitimately produce a commit.
-
-## Troubleshooting
-
-Open the failed workflow's job log. A rate-limit or temporary upstream error is retried only within a short bound; a later scheduled/manual run can recover. If optional GraphQL data is unavailable, public calendar data remains usable. If the public calendar layout changes and exact counts cannot be parsed, the generator does not estimate values from cell colors.
-
-The Capsule Render header/footer, Readme Typing SVG animation, and technology icons are cached in this repository as local SVG assets. Their upstream services are not needed to render the committed README. To change those static visuals, fetch and verify replacements separately; the activity workflow updates only its analytics allowlist. This implementation uses the generated contribution graph and does not reference an ungenerated snake image.
-
-References: [GitHub workflow events and schedules](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows), [GITHUB_TOKEN permissions](https://docs.github.com/en/actions/tutorials/authenticate-with-github_token).
+- A recoverable API failure leaves the affected section's last verified values and data date in place or shows an unavailable state when no verified value exists. The workflow publishes the validated status change and then flags the refresh as incomplete. Unexpected generator failures stop publication.
+- A successful zero count differs from an unavailable data source. Bounded retries handle transient network or rate-limit errors until the next run can try again.
+- If branch policy blocks the automation from writing the default branch, the generated files remain at their previous committed state. The repository's existing branch policy determines whether the workflow may publish directly.
