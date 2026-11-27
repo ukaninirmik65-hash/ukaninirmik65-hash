@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="366" height="564" viewBox="0 0 366 564" role="img" aria-labelledby="title description">
   <title id="title">Contribution analytics</title>
-  <desc id="description">2026-01-01 to 2026-11-27 UTC. 146 contributions across 34 active days. Current streak: 2 days. Longest streak: 4 days. The heatmap shows verified daily counts. Below it are monthly totals, Monday-start weekly totals, and streaks. Comparable year-to-date totals: 2026: 146, 2025: 24.</desc>
+  <desc id="description">2026-01-01 to 2026-11-27 UTC. 149 contributions across 34 active days. Current streak: 2 days. Longest streak: 4 days. The heatmap shows verified daily counts. Below it are monthly totals, Monday-start weekly totals, and streaks. Comparable year-to-date totals: 2026: 149, 2025: 24.</desc>
   <style>
     :root { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
     .surface { fill: #f7f9ff; stroke: #bac7de; }
@@ -368,7 +368,7 @@
   <rect class="level-2" x="308.4" y="116.4" width="5.1" height="5.1" rx="1"><title>2026-11-24 UTC · 3</title></rect>
   <rect class="level-0" x="308.4" y="122.8" width="5.1" height="5.1" rx="1"><title>2026-11-25 UTC · 0</title></rect>
   <rect class="level-2" x="308.4" y="129.2" width="5.1" height="5.1" rx="1"><title>2026-11-26 UTC · 4</title></rect>
-  <rect class="level-3" x="308.4" y="135.6" width="5.1" height="5.1" rx="1"><title>2026-11-27 UTC · 6</title></rect>
+  <rect class="level-3" x="308.4" y="135.6" width="5.1" height="5.1" rx="1"><title>2026-11-27 UTC · 9</title></rect>
   <rect class="level-0" x="19" y="163" width="9" height="9" rx="2" />
   <text class="small" x="32" y="172" text-anchor="start">0</text>
   <rect class="level-1" x="66" y="163" width="9" height="9" rx="2" />
@@ -380,27 +380,27 @@
   <rect class="level-4" x="207" y="163" width="9" height="9" rx="2" />
   <text class="small" x="220" y="172" text-anchor="start">10+</text>
   <text class="label" x="16" y="206" text-anchor="start">Monthly totals</text>
-  <text class="small" x="349" y="206" text-anchor="end">Peak 82</text>
+  <text class="small" x="349" y="206" text-anchor="end">Peak 85</text>
   <path class="axis" d="M 17,272.5 H 349" />
   <text class="small" x="30.8" y="288" text-anchor="middle">Jan</text>
   <text class="small" x="58.5" y="288" text-anchor="middle">Feb</text>
   <rect class="purple" x="45.7" y="270.8" width="25.7" height="1.2" rx="1"><title>2026-02 · 2</title></rect>
   <text class="small" x="86.2" y="288" text-anchor="middle">Mar</text>
-  <rect class="purple" x="73.3" y="267.6" width="25.7" height="4.4" rx="1"><title>2026-03 · 7</title></rect>
+  <rect class="purple" x="73.3" y="267.8" width="25.7" height="4.2" rx="1"><title>2026-03 · 7</title></rect>
   <text class="small" x="113.8" y="288" text-anchor="middle">Apr</text>
-  <rect class="purple" x="101.0" y="265.2" width="25.7" height="6.8" rx="1"><title>2026-04 · 11</title></rect>
+  <rect class="purple" x="101.0" y="265.4" width="25.7" height="6.6" rx="1"><title>2026-04 · 11</title></rect>
   <text class="small" x="141.5" y="288" text-anchor="middle">May</text>
-  <rect class="purple" x="128.7" y="267.0" width="25.7" height="5.0" rx="1"><title>2026-05 · 8</title></rect>
+  <rect class="purple" x="128.7" y="267.2" width="25.7" height="4.8" rx="1"><title>2026-05 · 8</title></rect>
   <text class="small" x="169.2" y="288" text-anchor="middle">Jun</text>
   <text class="small" x="196.8" y="288" text-anchor="middle">Jul</text>
   <text class="small" x="224.5" y="288" text-anchor="middle">Aug</text>
   <rect class="purple" x="211.7" y="270.8" width="25.7" height="1.2" rx="1"><title>2026-08 · 2</title></rect>
   <text class="small" x="252.2" y="288" text-anchor="middle">Sep</text>
-  <rect class="purple" x="239.3" y="255.2" width="25.7" height="16.8" rx="1"><title>2026-09 · 27</title></rect>
+  <rect class="purple" x="239.3" y="255.8" width="25.7" height="16.2" rx="1"><title>2026-09 · 27</title></rect>
   <text class="small" x="279.8" y="288" text-anchor="middle">Oct</text>
-  <rect class="purple" x="267.0" y="267.6" width="25.7" height="4.4" rx="1"><title>2026-10 · 7</title></rect>
+  <rect class="purple" x="267.0" y="267.8" width="25.7" height="4.2" rx="1"><title>2026-10 · 7</title></rect>
   <text class="small" x="307.5" y="288" text-anchor="middle">Nov</text>
-  <rect class="purple" x="294.7" y="221.0" width="25.7" height="51.0" rx="1"><title>2026-11 · 82</title></rect>
+  <rect class="purple" x="294.7" y="221.0" width="25.7" height="51.0" rx="1"><title>2026-11 · 85</title></rect>
   <text class="label" x="16" y="317" text-anchor="start">Weekly totals</text>
   <text class="small" x="349" y="317" text-anchor="end">Peak 44</text>
   <path class="axis" d="M 17,383.5 H 349" />
@@ -419,7 +419,7 @@
   <rect class="teal" x="270.1" y="381.8" width="4.1" height="1.2" rx="1"><title>2026-10-12 · 1</title></rect>
   <rect class="teal" x="288.5" y="332.0" width="4.1" height="51.0" rx="1"><title>2026-11-02 · 44</title></rect>
   <rect class="teal" x="300.8" y="363.3" width="4.1" height="19.7" rx="1"><title>2026-11-16 · 17</title></rect>
-  <rect class="teal" x="307.0" y="358.7" width="4.1" height="24.3" rx="1"><title>2026-11-23 · 21</title></rect>
+  <rect class="teal" x="307.0" y="355.2" width="4.1" height="27.8" rx="1"><title>2026-11-23 · 24</title></rect>
   <text class="small" x="17" y="399" text-anchor="start">2025-12-29</text>
   <text class="small" x="349" y="399" text-anchor="end">2026-11-23</text>
   <text class="label" x="16" y="427" text-anchor="start">Contribution streaks</text>
@@ -435,9 +435,9 @@
   <text class="small" x="17" y="526" text-anchor="start">2026</text>
   <rect class="track" x="104" y="518" width="164" height="8" rx="4" />
   <rect class="teal" x="104" y="518" width="164.0" height="8" rx="4" />
-  <text class="small" x="349" y="526" text-anchor="end">146</text>
+  <text class="small" x="349" y="526" text-anchor="end">149</text>
   <text class="small" x="17" y="548" text-anchor="start">2025</text>
   <rect class="track" x="104" y="540" width="164" height="8" rx="4" />
-  <rect class="purple" x="104" y="540" width="27.0" height="8" rx="4" />
+  <rect class="purple" x="104" y="540" width="26.4" height="8" rx="4" />
   <text class="small" x="349" y="548" text-anchor="end">24</text>
 </svg>
