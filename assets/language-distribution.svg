@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="366" height="133" viewBox="0 0 366 133" role="img" aria-labelledby="title description">
+  <title id="title">Programming language distribution</title>
+  <desc id="description">JavaScript 43.47%, TypeScript 27.82%, CSS 21.25%, HTML 7.46%</desc>
+  <style>
+    :root { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+    .surface { fill: #f6f8fc; stroke: #c4d0de; }
+    .label { fill: #182e4a; font-size: 15px; font-weight: 600; }
+    .value { fill: #3c526a; font-size: 15px; font-variant-numeric: tabular-nums; }
+    @media (prefers-color-scheme: dark) {
+      .surface { fill: #111b2b; stroke: #33465c; }
+      .label { fill: #eef3f9; }
+      .value { fill: #b9c8da; }
+    }
+  </style>
+  <rect class="surface" x=".5" y=".5" width="365" height="132" rx="10" />
+  <defs><clipPath id="bar"><rect x="15" y="15" width="336" height="13" rx="6" /></clipPath></defs>
+  <g clip-path="url(#bar)">
+    <rect class="lang-0" x="15.000" y="15" width="146.065" height="13" />
+    <rect class="lang-1" x="161.065" y="15" width="93.469" height="13" />
+    <rect class="lang-2" x="254.534" y="15" width="71.401" height="13" />
+    <rect class="lang-3" x="325.936" y="15" width="25.064" height="13" />
+  </g>
+  <circle class="lang-0" cx="21" cy="48" r="5" />
+  <text class="label" x="34" y="53" text-anchor="start">JavaScript</text>
+  <text class="value" x="349" y="53" text-anchor="end">43.47%</text>
+  <circle class="lang-1" cx="21" cy="72" r="5" />
+  <text class="label" x="34" y="77" text-anchor="start">TypeScript</text>
+  <text class="value" x="349" y="77" text-anchor="end">27.82%</text>
+  <circle class="lang-2" cx="21" cy="96" r="5" />
+  <text class="label" x="34" y="101" text-anchor="start">CSS</text>
+  <text class="value" x="349" y="101" text-anchor="end">21.25%</text>
+  <circle class="lang-3" cx="21" cy="120" r="5" />
+  <text class="label" x="34" y="125" text-anchor="start">HTML</text>
+  <text class="value" x="349" y="125" text-anchor="end">7.46%</text>
+</svg>
