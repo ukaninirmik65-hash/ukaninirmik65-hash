@@ -10,41 +10,54 @@ const DAY = 86_400_000;
 const curatedProjects = [
   {
     name: 'ERP-App', title: 'ERP Management Frontend',
-    description: 'React dashboard for customer records, product listings, inventory and reporting. The frontend prototype uses local and static data.',
-    stack: ['React.js', 'JavaScript', 'CSS3', 'Material UI', 'Recharts', 'Vite'],
+    description: 'React frontend prototype for customer records, product listings, inventory and reporting, using local and static data.',
+    stack: ['React.js', 'JavaScript', 'CSS3', 'Material UI', 'React Router', 'Recharts', 'Vite'],
+    features: ['Customer creation, editing and deletion', 'Search and status filters', 'Inventory views and chart-based reporting'],
     demoUrl: 'https://erp-app-khaki.vercel.app/',
   },
   {
     name: 'atakKriya-2.O', title: 'Atal Kriya 2.0',
-    description: 'Employee self-service prototype covering attendance, leave, expenses and map-based field workflows, with simulated login and browser-local data.',
+    description: 'Employee self-service frontend prototype with simulated login and browser-local data.',
     stack: ['React.js', 'JavaScript', 'Tailwind CSS', 'React Router', 'Leaflet', 'Vite'],
+    features: ['Attendance check-in and check-out', 'Leave request validation', 'Expense records and field route maps'],
     demoUrl: 'https://atak-kriya-2-o.vercel.app/',
   },
   {
     name: 'Tetris-Game', title: 'Tetris Game',
-    description: 'Browser-based falling-block game with keyboard controls, line clearing, a next-piece preview, sound effects and local high scores.',
+    description: 'Browser-based falling-block game built with the Canvas API.',
     stack: ['HTML5', 'CSS3', 'JavaScript', 'Canvas API'],
+    features: ['Keyboard movement and rotation', 'Collision detection and line clearing', 'Next-piece preview, audio and local high scores'],
     demoUrl: 'https://ukaninirmik65-hash.github.io/Tetris-Game/',
   },
   {
     name: 'Anitajewellerys', title: 'Anita Jewellery',
-    description: 'Responsive jewellery storefront showcase with a promotional hero, collection and product layouts, and mobile navigation.',
+    description: 'Responsive jewellery storefront interface showcase.',
     stack: ['HTML5', 'CSS3', 'JavaScript'],
+    features: ['Promotional hero', 'Collection and product layouts', 'Mobile navigation'],
     demoUrl: 'https://anitajewellerys-k56t.vercel.app/',
   },
   {
     name: 'Neelmadhav-Public-School', title: 'Neelmadhav Public School',
-    description: 'School information site with responsive navigation, academic sections, a gallery, event toggles and reduced-motion support.',
+    description: 'Responsive school information site with academic and event sections.',
     stack: ['HTML5', 'CSS3', 'JavaScript'],
+    features: ['Mobile menu and active-section navigation', 'Gallery and event toggles', 'Scroll effects with reduced-motion support'],
     demoUrl: 'https://neelmadhav-public-school.vercel.app/',
   },
   {
     name: 'nirmik-portfolio', title: 'Personal Portfolio',
-    description: 'React portfolio for projects and frontend services, with theme switching, project filtering and a validated inquiry form.',
+    description: 'React portfolio presenting projects, frontend services and an inquiry flow.',
     stack: ['React.js', 'JavaScript', 'Tailwind CSS', 'Vite'],
+    features: ['Light and dark themes', 'Project filtering', 'Validated inquiry form'],
     demoUrl: 'https://nirmik-portfolio.vercel.app/',
   },
 ];
+
+const manifestTechnologies = {
+  react: 'React.js', next: 'Next.js', 'react-router': 'React Router', 'react-router-dom': 'React Router',
+  vue: 'Vue.js', nuxt: 'Nuxt', svelte: 'Svelte', '@sveltejs/kit': 'SvelteKit', '@angular/core': 'Angular',
+  astro: 'Astro', '@mui/material': 'Material UI', tailwindcss: 'Tailwind CSS', bootstrap: 'Bootstrap',
+  leaflet: 'Leaflet', recharts: 'Recharts', express: 'Express', vite: 'Vite', typescript: 'TypeScript',
+};
 
 const lower = value => typeof value === 'string' ? value.toLowerCase() : '';
 const repoName = value => typeof value === 'string' && /^[\w.-]{1,100}$/.test(value) && !/^\.{1,2}$/.test(value);
@@ -56,6 +69,8 @@ const bot = account => account?.type === 'Bot' || /\[bot\]$/i.test(account?.logi
 const titleLine = value => typeof value === 'string' ? value.split(/\r?\n/, 1)[0].trim() : '';
 const automationTitle = value => /^(?:chore(?:\([^)]*\))?:\s*)?(?:refresh|update) (?:public )?(?:github )?profile (?:readme|activity|data|assets|stats|statistics)\b/i.test(value);
 const activeProject = (repo, username) => repoName(repo.name) && !repo.private && !repo.fork && !repo.archived && !repo.disabled && lower(repo.name) !== lower(username);
+const pushedTime = repo => timestamp(repo.pushedAtInstant) || timestamp(repo.pushedAt) || '';
+const newestPushFirst = (left, right) => pushedTime(right).localeCompare(pushedTime(left)) || left.name.localeCompare(right.name, 'en');
 
 function missingResource(error) {
   return [404, 409, 410].includes(error?.status) || /\bHTTP (?:404|409|410)\b/.test(error?.message || '');
@@ -72,6 +87,28 @@ async function listCommits(request, owner, name, query) {
     if (!missingResource(error)) throw error;
     return [];
   }
+}
+
+async function readManifestStack(request, owner, name) {
+  let file;
+  try {
+    file = await (await request(`${API}/repos/${owner}/${name}/contents/package.json`)).json();
+  } catch (error) {
+    if (!missingResource(error)) throw error;
+    return [];
+  }
+  if (file?.type !== 'file' || file.encoding !== 'base64' || typeof file.content !== 'string' || file.content.length > 100_000) return [];
+  let manifest;
+  try {
+    manifest = JSON.parse(Buffer.from(file.content, 'base64').toString('utf8').replace(/^\uFEFF/, ''));
+  } catch {
+    return [];
+  }
+  if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) return [];
+  const packages = { ...manifest.dependencies, ...manifest.devDependencies, ...manifest.peerDependencies };
+  return [...new Set(Object.entries(manifestTechnologies)
+    .filter(([dependency]) => Object.hasOwn(packages, dependency) && typeof packages[dependency] === 'string' && packages[dependency].trim())
+    .map(([, technology]) => technology))];
 }
 
 function safeDemoUrl(value, username) {
@@ -136,35 +173,48 @@ export async function fetchProjects({ username, repositories, request, fetchImpl
   const excluded = new Set([...curated.map(item => lower(item.name)), 'demo', 'motiwalaperfumes-clone']);
   const discovered = active.filter(repo => !excluded.has(lower(repo.name)) && repo.description?.trim() &&
     (repo.topics?.includes('featured') || (repo.stars > 0 && repo.language)))
-    .sort((left, right) => right.stars - left.stars || (right.pushedAt || '').localeCompare(left.pushedAt || '') || left.name.localeCompare(right.name))
+    .sort((left, right) => right.stars - left.stars || newestPushFirst(left, right))
     .slice(0, Math.max(0, 8 - selected.length));
   selected.push(...discovered.map(repo => ({ repo })));
 
   return Promise.all(selected.map(async ({ repo, details }) => {
-    const [commits, demoUrl] = await Promise.all([
+    const [commits, demoUrl, stack] = await Promise.all([
       listCommits(request, username, repo.name, { per_page: 5 }),
       verifiedDemo({
         urls: [details?.demoUrl, repo.homepage], username, fetchImpl, onWarning,
         previous: previousProjects.find(item => lower(item.name) === lower(repo.name))?.demoUrl,
       }),
+      details?.stack ?? readManifestStack(request, username, repo.name),
     ]);
     const meaningful = commits.find(item => {
       const title = titleLine(item.commit.message);
       return title && !bot(item.author) && !bot(item.committer) && !automationTitle(title);
     });
+    const githubDescription = repo.description?.trim() || null;
+    const description = details?.description || githubDescription;
     return {
       name: repo.name,
       title: details?.title || repo.name,
-      description: details?.description || repo.description?.trim() || null,
+      description,
+      githubDescription: githubDescription !== description ? githubDescription : null,
       language: repo.language,
-      stack: details?.stack || (repo.language ? [repo.language] : []),
+      stack,
+      features: details?.features || [],
       stars: repo.stars,
       forks: repo.forks,
+      license: repo.license || null,
+      pushedAt: pushedTime(repo).slice(0, 10) || null,
       updatedAt: timestamp(meaningful?.commit.committer.date)?.slice(0, 10) || null,
       url: `${GITHUB}/${username}/${repo.name}`,
       demoUrl,
     };
   }));
+}
+
+export function getRecentlyUpdatedProjects({ username, repositories }) {
+  return repositories.filter(repo => activeProject(repo, username) && pushedTime(repo))
+    .sort(newestPushFirst).slice(0, ACTIVITY_LIMIT)
+    .map(repo => ({ name: repo.name, url: `${GITHUB}/${username}/${repo.name}`, updatedAt: pushedTime(repo).slice(0, 10) }));
 }
 
 function publicEventRepo(event, username) {
@@ -274,8 +324,8 @@ export async function fetchRecentActivity({ username, repositories, request, fet
   }
 
   if (recentEntries(items, since, until).length < ACTIVITY_LIMIT) {
-    const projects = repositories.filter(repo => activeProject(repo, username) && repo.pushedAt >= since.slice(0, 10))
-      .sort((a, b) => b.pushedAt.localeCompare(a.pushedAt) || a.name.localeCompare(b.name)).slice(0, 8);
+    const projects = repositories.filter(repo => activeProject(repo, username) && pushedTime(repo).slice(0, 10) >= since.slice(0, 10))
+      .sort(newestPushFirst).slice(0, 8);
     const fallback = await Promise.all(projects.map(async project => {
       const commits = await listCommits(request, username, project.name, { author: username, since, per_page: 5 });
       return commits.map(commit => commitActivity(commit, `${username}/${project.name}`, username));

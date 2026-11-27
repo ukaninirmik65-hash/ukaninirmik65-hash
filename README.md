@@ -38,54 +38,62 @@ I turn UI designs into reusable components with attention to accessibility, perf
   <tr>
     <td width="50%" valign="top">
       <h3>ERP Management Frontend</h3>
-      <p>React dashboard for customer records, product listings, inventory and reporting. The frontend prototype uses local and static data.</p>
-      <p><code>React.js</code> <code>JavaScript</code> <code>CSS3</code> <code>Material UI</code> <code>Recharts</code> <code>Vite</code></p>
-      <p>JavaScript · 0 stars</p>
-      <p>Code updated 2026-09-23</p>
+      <p>React frontend prototype for customer records, product listings, inventory and reporting, using local and static data.</p>
+      <p>Customer creation, editing and deletion · Search and status filters · Inventory views and chart-based reporting</p>
+      <p><code>React.js</code> <code>JavaScript</code> <code>CSS3</code> <code>Material UI</code> <code>React Router</code> <code>Recharts</code> <code>Vite</code></p>
+      <p>JavaScript · 0 stars · 0 forks</p>
+      <p>Last pushed 2026-09-23 UTC</p>
       <p><a href="https://github.com/ukaninirmik65-hash/ERP-App">ERP-App</a> · <a href="https://erp-app-khaki.vercel.app/">Live demo</a></p>
     </td>
     <td width="50%" valign="top">
       <h3>Atal Kriya 2.0</h3>
-      <p>Employee self-service prototype covering attendance, leave, expenses and map-based field workflows, with simulated login and browser-local data.</p>
+      <p>Employee self-service frontend prototype with simulated login and browser-local data.</p>
+      <p>Attendance check-in and check-out · Leave request validation · Expense records and field route maps</p>
       <p><code>React.js</code> <code>JavaScript</code> <code>Tailwind CSS</code> <code>React Router</code> <code>Leaflet</code> <code>Vite</code></p>
-      <p>JavaScript · 0 stars</p>
-      <p>Code updated 2026-10-08</p>
+      <p>JavaScript · 0 stars · 0 forks</p>
+      <p>Last pushed 2026-10-08 UTC</p>
       <p><a href="https://github.com/ukaninirmik65-hash/atakKriya-2.O">atakKriya-2.O</a> · <a href="https://atak-kriya-2-o.vercel.app/">Live demo</a></p>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
       <h3>Tetris Game</h3>
-      <p>Browser-based falling-block game with keyboard controls, line clearing, a next-piece preview, sound effects and local high scores.</p>
+      <p>Browser-based falling-block game built with the Canvas API.</p>
+      <p>Keyboard movement and rotation · Collision detection and line clearing · Next-piece preview, audio and local high scores</p>
       <p><code>HTML5</code> <code>CSS3</code> <code>JavaScript</code> <code>Canvas API</code></p>
-      <p>JavaScript · 1 star</p>
-      <p>Code updated 2026-03-30</p>
+      <p>JavaScript · 1 star · 0 forks</p>
+      <p>Last pushed 2026-03-30 UTC</p>
       <p><a href="https://github.com/ukaninirmik65-hash/Tetris-Game">Tetris-Game</a> · <a href="https://ukaninirmik65-hash.github.io/Tetris-Game/">Live demo</a></p>
     </td>
     <td width="50%" valign="top">
       <h3>Anita Jewellery</h3>
-      <p>Responsive jewellery storefront showcase with a promotional hero, collection and product layouts, and mobile navigation.</p>
+      <p>Responsive jewellery storefront interface showcase.</p>
+      <p>Promotional hero · Collection and product layouts · Mobile navigation</p>
       <p><code>HTML5</code> <code>CSS3</code> <code>JavaScript</code></p>
-      <p>CSS · 0 stars</p>
-      <p>Code updated 2026-05-20</p>
+      <p>CSS · 0 stars · 0 forks</p>
+      <p>Last pushed 2026-05-20 UTC</p>
       <p><a href="https://github.com/ukaninirmik65-hash/Anitajewellerys">Anitajewellerys</a> · <a href="https://anitajewellerys-k56t.vercel.app/">Live demo</a></p>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
       <h3>Neelmadhav Public School</h3>
-      <p>School information site with responsive navigation, academic sections, a gallery, event toggles and reduced-motion support.</p>
+      <p>Responsive school information site with academic and event sections.</p>
+      <p>Mobile menu and active-section navigation · Gallery and event toggles · Scroll effects with reduced-motion support</p>
       <p><code>HTML5</code> <code>CSS3</code> <code>JavaScript</code></p>
-      <p>JavaScript · 0 stars</p>
-      <p>Code updated 2026-08-29</p>
+      <p>JavaScript · 0 stars · 0 forks</p>
+      <p>Last pushed 2026-08-29 UTC</p>
       <p><a href="https://github.com/ukaninirmik65-hash/Neelmadhav-Public-School">Neelmadhav-Public-School</a> · <a href="https://neelmadhav-public-school.vercel.app/">Live demo</a></p>
     </td>
     <td width="50%" valign="top">
       <h3>Personal Portfolio</h3>
-      <p>React portfolio for projects and frontend services, with theme switching, project filtering and a validated inquiry form.</p>
+      <p>React portfolio presenting projects, frontend services and an inquiry flow.</p>
+      <p>Repository description · Nirmik Ukani — responsive React frontend developer portfolio, project showcase, and Web3Forms inquiries.</p>
+      <p>Light and dark themes · Project filtering · Validated inquiry form</p>
       <p><code>React.js</code> <code>JavaScript</code> <code>Tailwind CSS</code> <code>Vite</code></p>
-      <p>JavaScript · 0 stars</p>
-      <p>Code updated 2026-11-17</p>
+      <p>JavaScript · 0 stars · 0 forks</p>
+      <p>Last pushed 2026-11-26 UTC</p>
+      <p>Code updated 2026-11-17 UTC</p>
       <p><a href="https://github.com/ukaninirmik65-hash/nirmik-portfolio">nirmik-portfolio</a> · <a href="https://nirmik-portfolio.vercel.app/">Live demo</a></p>
     </td>
   </tr>
@@ -97,25 +105,68 @@ I turn UI designs into reusable components with attention to accessibility, perf
 
 <!-- STATS:START -->
 
+<img src="assets/github-statistics.svg" width="366" alt="GitHub statistics showing account totals, year-to-date activity, latest repository push and top language. The figures are available below as text." />
+
+<details>
+<summary>Statistics as text</summary>
+
 **Public account totals**
 
 | Repos | Stars | Followers |
 | ---: | ---: | ---: |
 | 9 | 1 | 6 |
 
-**Public contributions** · 2026-01-01 to 2026-11-27 UTC
+Original repositories: **9** · Forks received: **0** · Following: **3**
+
+**Year-to-date profile activity** · 2026-01-01 to 2026-11-27 UTC
 
 | Commits | PRs | Profile streak |
 | ---: | ---: | ---: |
 | 104 | 4 | 2 days |
 
+Contributions: **146** · Issues: **1**
+
+Longest streak: **4 days** · Active days: **34**
+
+Latest repository push: [nirmik-portfolio](<https://github.com/ukaninirmik65-hash/nirmik-portfolio>) · 2026-11-26 UTC
+
+Top language by repository bytes: **JavaScript**
+
+</details>
+
 <!-- STATS:END -->
+
+## Contribution Analytics
+
+<!-- CONTRIBUTIONS:START -->
+
+<img src="assets/contribution-analytics.svg" width="366" alt="146 contributions across 34 active days from 2026-01-01 to 2026-11-27 UTC. Daily contribution heatmap, monthly totals, weekly totals and streak charts." />
+
+146 contributions across 34 active days from 2026-01-01 to 2026-11-27 UTC.
+
+Same period last year: **24** contributions (2025-01-01 to 2025-11-27 UTC).
+
+<details>
+<summary>Monthly and weekly totals as text</summary>
+
+**Monthly** · 2026-01: 0 · 2026-02: 2 · 2026-03: 7 · 2026-04: 11 · 2026-05: 8 · 2026-06: 0 · 2026-07: 0 · 2026-08: 2 · 2026-09: 27 · 2026-10: 7 · 2026-11: 82
+
+**Weekly, starting on Monday** · 2025-12-29: 0 · 2026-01-05: 0 · 2026-01-12: 0 · 2026-01-19: 0 · 2026-01-26: 0 · 2026-02-02: 0 · 2026-02-09: 0 · 2026-02-16: 0 · 2026-02-23: 2 · 2026-03-02: 0 · 2026-03-09: 0 · 2026-03-16: 0 · 2026-03-23: 0 · 2026-03-30: 7 · 2026-04-06: 0 · 2026-04-13: 4 · 2026-04-20: 0 · 2026-04-27: 7 · 2026-05-04: 1 · 2026-05-11: 4 · 2026-05-18: 2 · 2026-05-25: 1 · 2026-06-01: 0 · 2026-06-08: 0 · 2026-06-15: 0 · 2026-06-22: 0 · 2026-06-29: 0 · 2026-07-06: 0 · 2026-07-13: 0 · 2026-07-20: 0 · 2026-07-27: 0 · 2026-08-03: 0 · 2026-08-10: 0 · 2026-08-17: 0 · 2026-08-24: 2 · 2026-08-31: 0 · 2026-09-07: 0 · 2026-09-14: 23 · 2026-09-21: 4 · 2026-09-28: 0 · 2026-10-05: 6 · 2026-10-12: 1 · 2026-10-19: 0 · 2026-10-26: 0 · 2026-11-02: 44 · 2026-11-09: 0 · 2026-11-16: 17 · 2026-11-23: 21
+
+</details>
+
+<!-- CONTRIBUTIONS:END -->
 
 ## Programming Language Distribution
 
 <!-- LANGUAGES:START -->
 
 <img src="assets/language-distribution.svg" width="366" alt="Share of repository language bytes. JavaScript 43.47%, TypeScript 27.82%, CSS 21.25%, HTML 7.46%" />
+
+- **JavaScript** · 364,456 bytes · 43.47% · 8 repositories
+- **TypeScript** · 233,220 bytes · 27.82% · 1 repository
+- **CSS** · 178,158 bytes · 21.25% · 8 repositories
+- **HTML** · 62,539 bytes · 7.46% · 8 repositories
 
 Based on language bytes in eligible public repositories. [Repository exclusions](docs/SETUP.md#language-distribution)
 
@@ -124,6 +175,16 @@ Based on language bytes in eligible public repositories. [Repository exclusions]
 ## Recent Development Activity
 
 <!-- RECENT_ACTIVITY:START -->
+
+**Recently pushed repositories**
+
+- [nirmik-portfolio](<https://github.com/ukaninirmik65-hash/nirmik-portfolio>) · 2026-11-26 UTC
+- [atakKriya-2.O](<https://github.com/ukaninirmik65-hash/atakKriya-2.O>) · 2026-10-08 UTC
+- [ERP-App](<https://github.com/ukaninirmik65-hash/ERP-App>) · 2026-09-23 UTC
+- [Neelmadhav-Public-School](<https://github.com/ukaninirmik65-hash/Neelmadhav-Public-School>) · 2026-08-29 UTC
+- [Anitajewellerys](<https://github.com/ukaninirmik65-hash/Anitajewellerys>) · 2026-05-20 UTC
+
+**Recent public events**
 
 - [Add Quality Assurance page with routing and styles](<https://github.com/DhruvilPatel121/Construction_Web/commit/fb76392fd35ad8dbb5995c255f7373b95f61fa80>) · Commit · DhruvilPatel121/Construction&#95;Web · 2026-11-24
 - [Refactor App component to use centralized routing and remove redundant code](<https://github.com/DhruvilPatel121/Construction_Web/commit/60ebb1aef68d75f1e082c00a08e261c65e3e8146>) · Commit · DhruvilPatel121/Construction&#95;Web · 2026-11-20
@@ -149,7 +210,7 @@ My work includes implementing UI designs, building reusable React components, ad
 
 <!-- LAST_UPDATED:START -->
 
-**2026-11-27 13:53 UTC** · Last complete data update.
+**2026-11-27 14:07 UTC** · Last complete data update.
 
 <!-- LAST_UPDATED:END -->
 

@@ -8,6 +8,7 @@ import {
   normalizeInventory, parsePublicCalendar, publicRequest, requestGitHub,
 } from '../scripts/profile-data.mjs';
 import { assertSafeOutputs, replaceSections, updateProfile, validateProfile } from '../scripts/update-profile.mjs';
+import { renderAssets } from '../scripts/profile-render.mjs';
 
 const API = 'https://api.github.com';
 const OWNER = 'example';
@@ -16,7 +17,7 @@ const INSTANT = '2026-01-03T09:00:00.000Z';
 const LATER = '2026-01-03T15:00:00.000Z';
 const TOKEN = 'unit-test-credential-that-must-not-appear';
 const SHA = '2'.repeat(40);
-const sections = ['PROJECTS', 'STATS', 'LANGUAGES', 'RECENT_ACTIVITY', 'LAST_UPDATED'];
+const sections = ['PROJECTS', 'STATS', 'CONTRIBUTIONS', 'LANGUAGES', 'RECENT_ACTIVITY', 'LAST_UPDATED'];
 const readme = ['# My developer profile', ...sections.map(name => `<!-- ${name}:START -->\nOriginal ${name} text\n<!-- ${name}:END -->`), 'Manual footer', ''].join('\n\n');
 const json = (value, options) => Response.json(value, options);
 
@@ -32,6 +33,10 @@ const days = [
   { date: '2026-01-02', count: 1234 },
   { date: '2026-01-03', count: 0 },
 ];
+const priorCalendarHTML = Array.from({ length: 365 }, (_, index) => {
+  const date = new Date(Date.UTC(2025, 0, index + 1)).toISOString().slice(0, 10);
+  return `<td data-date="${date}" id="prior-${index}"></td><tool-tip for="prior-${index}">No contributions on ${date}</tool-tip>`;
+}).join('\n');
 
 function repository(id, name, metadata = {}) {
   return {
@@ -64,11 +69,11 @@ function graphResponse(overrides = {}) {
   } } } };
 }
 
-function mockRequest({ followers = 4, languagesOffline = false, badTitle = false } = {}) {
+function mockRequest({ followers = 4, languagesOffline = false, historyOffline = false, badTitle = false } = {}) {
   return async (href, options) => {
     const { pathname, searchParams } = new URL(href);
     switch (pathname) {
-      case '/users/example': return json({ login: OWNER, followers, public_repos: 1 });
+      case '/users/example': return json({ login: OWNER, followers, following: 0, public_repos: 1 });
       case '/users/example/repos': return json([repository(1, 'interface', { stargazers_count: 2 })]);
       case '/graphql': {
         assert.equal(options.token, TOKEN);
@@ -78,7 +83,11 @@ function mockRequest({ followers = 4, languagesOffline = false, badTitle = false
         assert.equal(variables.login, OWNER);
         return json(graphResponse());
       }
-      case '/users/example/contributions': return new Response(calendarHTML);
+      case '/users/example/contributions':
+        if (searchParams.get('from') !== '2025-01-01') return new Response(calendarHTML);
+        if (historyOffline) throw Object.assign(new Error('History temporarily unavailable'), { status: 503 });
+        return new Response(priorCalendarHTML);
+      case '/repos/example/interface/contents/package.json': throw Object.assign(new Error('Not found'), { status: 404 });
       case '/repos/example/interface/languages':
         if (languagesOffline) throw Object.assign(new Error(`GitHub failed with ${TOKEN}`), { status: 503 });
         return json({ JavaScript: 3, CSS: 1 });
@@ -130,7 +139,8 @@ test('inventory totals count public repositories, including forks, while screeni
   const input = [repository(1, 'interface', { stargazers_count: 3, secret: TOKEN }), repository(2, 'fork', { fork: true, stargazers_count: 2 }),
     repository(3, 'restricted-secret-name', { private: true, visibility: 'private', stargazers_count: 18 })];
   const model = normalizeInventory({ login: OWNER, followers: 0, public_repos: 2 }, input, OWNER);
-  assert.deepEqual(model.stats, { repositories: 2, stars: 5, followers: 0 });
+  assert.deepEqual(model.stats, { repositories: 2, originals: 1, stars: 5, forks: 0, followers: 0,
+    following: null, latestRepository: { name: 'interface', url: 'https://github.com/example/interface', date: '2026-01-02' } });
   assert.deepEqual(model.repositories.map(repo => repo.name), ['interface', 'fork']);
   assert.doesNotMatch(JSON.stringify(model), /restricted-secret-name|unit-test-credential/);
   assert.throws(() => normalizeInventory({ login: OWNER, followers: 0, public_repos: 3 }, input, OWNER), /Incomplete public repository inventory/);
@@ -145,7 +155,8 @@ test('language distribution uses real byte amounts and does not request excluded
     requested.push(url);
     return json(url.includes('/application/') ? { JavaScript: 50, CSS: 30 } : { JavaScript: 20 });
   });
-  assert.deepEqual(result, [{ name: 'JavaScript', bytes: 70, percentage: 70 }, { name: 'CSS', bytes: 30, percentage: 30 }]);
+  assert.deepEqual(result, [{ name: 'JavaScript', bytes: 70, repositories: 2, percentage: 70 },
+    { name: 'CSS', bytes: 30, repositories: 1, percentage: 30 }]);
   assert.equal(requested.length, 2);
   assert.deepEqual(languageDistribution([{}, { CSS: 0 }]), []);
   assert.throws(() => languageDistribution([{ JavaScript: -1 }]), /Invalid repository language byte count/);
@@ -235,10 +246,11 @@ test('a credential with broader visibility cannot lengthen the signed-out streak
       date, contributionCount: date === PERIOD.to ? 5 : count,
     })) }] },
   });
-  const request = async url => url.endsWith('/graphql') ? json(payload) : new Response(calendarHTML);
+  const request = async url => url.endsWith('/graphql') ? json(payload)
+    : new Response(url.includes('2025-01-01') ? priorCalendarHTML : calendarHTML);
   const result = await fetchActivity({ username: OWNER, period: PERIOD, now: INSTANT, tokens: [TOKEN], request });
   assert.equal(result.streak, 2);
-  assert.equal('days' in result, false);
+  assert.deepEqual(result.days, days);
 });
 
 test('README replacement preserves manual text, supports CRLF and rejects duplicate or injected markers', () => {
@@ -270,6 +282,34 @@ test('a successful repeat refresh leaves files and timestamps identical', async 
   assert.deepEqual(next.model, first.model);
   assert.match(await readFile(join(config.root, 'README.md'), 'utf8'), /Manual footer/);
   await validateProfile(config.root, [TOKEN]);
+});
+
+test('same-period historical comparison retains its original date during an outage', async t => {
+  const config = await fixture(t);
+  const initial = await updateProfile(config);
+  assert.equal(initial.model.activity.data.previousYear.totalContributions, 0);
+  const partial = await updateProfile({ ...config, now: LATER, request: mockRequest({ historyOffline: true }) });
+  assert.deepEqual(partial.failed, []);
+  assert.deepEqual(partial.model.activity.data.previousYear, initial.model.activity.data.previousYear);
+  assert.equal(partial.model.activity.data.previousYearObservedAt, INSTANT);
+  assert.equal(partial.model.activity.data.previousYearStale, true);
+  assert.equal(partial.model.activity.stale, false);
+});
+
+test('workflow limits publishing to the default branch and the generated file list', async () => {
+  const yaml = await readFile(new URL('../.github/workflows/update-profile.yml', import.meta.url), 'utf8');
+  const publishing = yaml.split('\n  refresh:')[1];
+  assert.match(yaml, /permissions:\s*contents: read/);
+  assert.match(yaml, /cron: '23 \*\/6 \* \* \*'/);
+  assert.match(yaml, /cancel-in-progress: false/);
+  assert.match(publishing, /event_name != 'pull_request'/);
+  assert.match(publishing, /github\.ref == format\('refs\/heads\/\{0\}', github\.event\.repository\.default_branch\)/);
+  assert.match(publishing, /github\.actor != 'github-actions\[bot\]'/);
+  const addBlock = publishing.slice(publishing.indexOf('git add --'), publishing.indexOf('if git diff --cached'));
+  assert.deepEqual(addBlock.match(/(?:README\.md|assets\/[\w.-]+)/g),
+    ['README.md', 'assets/profile-data.json', ...Object.keys(renderAssets({})).map(name => `assets/${name}`)]);
+  assert.ok(publishing.indexOf('npm run validate') < publishing.indexOf('git add --'));
+  assert.doesNotMatch(publishing, /git push .*--force/);
 });
 
 test('a partial outage keeps the previous section date and complete refresh time', async t => {

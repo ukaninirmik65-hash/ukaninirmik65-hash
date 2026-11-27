@@ -104,7 +104,9 @@ export function normalizeInventory(account, repositories, username) {
       || ![repo.stargazers_count, repo.forks_count].every(integer) || ![repo.fork, repo.archived, repo.disabled].every(value => typeof value === 'boolean')) {
       throw new Error('Invalid public repository response');
     }
-    const pushedAt = repo.pushed_at?.slice(0, 10);
+    const pushedAtInstant = typeof repo.pushed_at === 'string' && Number.isFinite(Date.parse(repo.pushed_at))
+      ? new Date(repo.pushed_at).toISOString() : null;
+    const license = repo.license?.spdx_id;
     return {
       name: repo.name,
       description: typeof repo.description === 'string' ? repo.description : null,
@@ -114,19 +116,29 @@ export function normalizeInventory(account, repositories, username) {
       fork: repo.fork,
       archived: repo.archived,
       disabled: repo.disabled,
-      pushedAt: validDate(pushedAt) ? pushedAt : null,
+      pushedAt: pushedAtInstant?.slice(0, 10) ?? null,
+      pushedAtInstant,
+      license: typeof license === 'string' && /^[a-z\d][a-z\d.+-]*$/i.test(license) && !['NOASSERTION', 'NONE'].includes(license.toUpperCase())
+        ? license : null,
       language: typeof repo.language === 'string' ? repo.language : null,
       homepage: typeof repo.homepage === 'string' ? repo.homepage : null,
       defaultBranch: typeof repo.default_branch === 'string' ? repo.default_branch : null,
       topics: Array.isArray(repo.topics) ? repo.topics.filter(topic => typeof topic === 'string') : [],
     };
   });
+  const latest = normalized.filter(repo => repo.pushedAtInstant && repo.name.toLowerCase() !== username.toLowerCase()
+    && !repo.fork && !repo.archived && !repo.disabled)
+    .sort((a, b) => b.pushedAtInstant.localeCompare(a.pushedAtInstant) || a.name.localeCompare(b.name, 'en'))[0];
   return {
     repositories: normalized,
     stats: {
       repositories: normalized.length,
+      originals: normalized.filter(repo => !repo.fork).length,
       stars: normalized.reduce((sum, repo) => sum + repo.stars, 0),
+      forks: normalized.reduce((sum, repo) => sum + repo.forks, 0),
       followers: account.followers,
+      following: integer(account.following) ? account.following : null,
+      latestRepository: latest ? { name: latest.name, url: latest.url, date: latest.pushedAt } : null,
     },
   };
 }
@@ -145,15 +157,16 @@ export function languageDistribution(responses) {
   for (const response of responses) {
     if (!response || typeof response !== 'object' || Array.isArray(response)) throw new Error('Invalid repository language response');
     for (const [name, value] of Object.entries(response)) {
-      const total = (bytes.get(name) || 0) + value;
+      const previous = bytes.get(name) || { bytes: 0, repositories: 0 };
+      const total = previous.bytes + value;
       if (!name.trim() || !integer(value) || !integer(total)) throw new Error('Invalid repository language byte count');
-      if (value > 0) bytes.set(name, total);
+      if (value > 0) bytes.set(name, { bytes: total, repositories: previous.repositories + 1 });
     }
   }
-  const total = [...bytes.values()].reduce((sum, value) => sum + value, 0);
+  const total = [...bytes.values()].reduce((sum, value) => sum + value.bytes, 0);
   if (!integer(total)) throw new Error('Invalid total language byte count');
-  return [...bytes.entries()].sort(([a, aBytes], [b, bBytes]) => bBytes - aBytes || a.localeCompare(b, 'en'))
-    .map(([name, count]) => ({ name, bytes: count, percentage: 100 * (count / total) }));
+  return [...bytes.entries()].sort(([a, aUsage], [b, bUsage]) => bUsage.bytes - aUsage.bytes || a.localeCompare(b, 'en'))
+    .map(([name, usage]) => ({ name, ...usage, percentage: 100 * (usage.bytes / total) }));
 }
 
 export async function fetchLanguages(username, repositories, request) {
@@ -209,6 +222,63 @@ export function currentStreak(days, today) {
     cursor -= DAY;
   }
   return streak;
+}
+
+export function summarizeCalendar(days) {
+  let totalContributions = 0;
+  let activeDays = 0;
+  let longestStreak = 0;
+  let streak = 0;
+  for (const { count } of days) {
+    totalContributions += count;
+    if (count > 0) {
+      activeDays++;
+      streak++;
+      longestStreak = Math.max(longestStreak, streak);
+    } else {
+      streak = 0;
+    }
+  }
+  return { totalContributions, activeDays, longestStreak };
+}
+
+export function previousYearPeriod(period) {
+  const year = String(Number(period.to.slice(0, 4)) - 1).padStart(4, '0');
+  const matchedDate = year + period.to.slice(4);
+  // Compare calendar dates without moving Feb 29 into the next month.
+  return { from: `${year}-01-01`, to: validDate(matchedDate) ? matchedDate : `${year}-02-28` };
+}
+
+async function fetchPublicCalendar(username, period, request) {
+  const url = `https://github.com/users/${username}/contributions?from=${period.from}&to=${period.to}`;
+  return parsePublicCalendar(await (await request(url)).text(), period);
+}
+
+async function addCalendarAnalytics(activity, days, username, request, onWarning) {
+  const { from, to, counts, repositories } = activity;
+  const comparisonPeriod = previousYearPeriod({ from, to });
+  const priorFullYear = { ...comparisonPeriod, to: comparisonPeriod.from.slice(0, 4) + '-12-31' };
+  let historicalDays;
+  try {
+    historicalDays = await fetchPublicCalendar(username, priorFullYear, request);
+  } catch {
+    onWarning?.('The previous-year public contribution calendar could not refresh.');
+  }
+
+  const priorComparableDays = historicalDays?.filter(day => day.date <= comparisonPeriod.to);
+  let streak = currentStreak(days, to);
+  // An empty current date can leave a streak from Dec 31 active on Jan 1.
+  const elapsed = days.length - Number(days.at(-1).count === 0);
+  if (streak === elapsed) {
+    streak = historicalDays ? currentStreak([...historicalDays, ...days], to) : null;
+    if (historicalDays && streak === historicalDays.length + elapsed) streak = null;
+  }
+
+  return {
+    from, to, counts, repositories, days, streak,
+    ...summarizeCalendar(days),
+    previousYear: priorComparableDays ? { ...comparisonPeriod, ...summarizeCalendar(priorComparableDays) } : null,
+  };
 }
 
 const breakdown = {
@@ -287,7 +357,7 @@ export function normalizeActivity(payload, username, period) {
   };
 }
 
-export async function fetchActivity({ username, period, now, tokens, request }) {
+export async function fetchActivity({ username, period, now, tokens, request, onWarning }) {
   if (!tokens.length) throw new Error('GitHub GraphQL credentials are missing');
   for (const [index, token] of tokens.entries()) {
     try {
@@ -296,16 +366,13 @@ export async function fetchActivity({ username, period, now, tokens, request }) 
         body: JSON.stringify({ query: activityQuery, variables: { login: username, from: `${period.from}T00:00:00Z`, to: now } }),
       });
       const activity = normalizeActivity(await response.json(), username, period);
-      const url = `https://github.com/users/${username}/contributions?from=${period.from}&to=${period.to}`;
-      const publicDays = parsePublicCalendar(await (await request(url)).text(), period);
+      const publicDays = await fetchPublicCalendar(username, period, request);
       const matchesPublic = activity.days.every((day, dayIndex) => day.count === publicDays[dayIndex].count);
       if (activity.canVerifyStreak && !matchesPublic) {
         throw new Error('GraphQL and anonymous contribution dates or counts differ');
       }
-      // A user token can see other activity. In that case use only the dates/counts
-      // that the account already exposes in its signed-out public profile.
-      const streak = currentStreak(matchesPublic ? activity.days : publicDays, period.to);
-      return { ...period, counts: activity.counts, streak, repositories: activity.repositories };
+      // Only the signed-out calendar may supply the daily numbers in published assets.
+      return addCalendarAnalytics(activity, publicDays, username, request, onWarning);
     } catch (error) {
       if (index === tokens.length - 1) throw error;
     }
