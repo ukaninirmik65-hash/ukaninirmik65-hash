@@ -1,46 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  activityPercentages,
-  radarPoints,
   renderAssets,
   renderReadmeSections,
 } from '../scripts/profile-render.mjs';
 
 const section = data => ({ data, observedAt: '2026-11-22T10:32:00.000Z', stale: false });
 const counts = { commits: 4, pullRequests: 3, reviews: 2, issues: 1 };
-
-test('activity percentages and radar coordinates follow the four fixed axes', () => {
-  const shares = activityPercentages(counts);
-  assert.deepEqual(shares, { reviews: 20, issues: 10, pullRequests: 30, commits: 40 });
-  assert.deepEqual(radarPoints(shares), [
-    { x: 175, y: 115.4 },
-    { x: 182.3, y: 130 },
-    { x: 175, y: 151.9 },
-    { x: 145.8, y: 130 },
-  ]);
-  assert.equal(activityPercentages({ commits: 2 }), null);
-});
-
-test('a single contribution category reaches exactly 100% on its axis', () => {
-  const activity = section({ counts: { commits: 13, pullRequests: 0, reviews: 0, issues: 0 } });
-  const svg = renderAssets({ activity })['activity-overview.svg'];
-  assert.match(svg, /class="area" points="175\.000,130\.000 175\.000,130\.000 175\.000,130\.000 102\.000,130\.000"/);
-  assert.match(svg, /Commits 100%/);
-});
-
-test('zero and unavailable activity have distinct states without a fabricated radar area', () => {
-  const zero = section({ counts: { commits: 0, pullRequests: 0, reviews: 0, issues: 0 } });
-  assert.deepEqual(activityPercentages(zero.data.counts), { reviews: 0, issues: 0, pullRequests: 0, commits: 0 });
-  const missing = section({ counts: null });
-  const zeroAsset = renderAssets({ activity: zero })['activity-overview.svg'];
-  const missingAsset = renderAssets({ activity: missing })['activity-overview.svg'];
-  assert.match(zeroAsset, /No contributions in this period/);
-  assert.match(missingAsset, /Contribution counts unavailable/);
-  assert.doesNotMatch(zeroAsset + missingAsset, /<polygon/);
-  assert.match(renderReadmeSections({ activity: zero }).ACTIVITY_OVERVIEW, /Commits\*\* · 0/);
-  assert.match(renderReadmeSections({ activity: missing }).ACTIVITY_OVERVIEW, /Commits\*\* · Unavailable/);
-});
 
 test('language shares define proportional stacked widths with matching language colors', () => {
   const languages = section([
@@ -96,9 +62,6 @@ test('README uses an independent timestamp for cached source data and for full s
   });
   assert.match(sections.STATS, /\| 7 \| 0 \| 3 \|/);
   assert.match(sections.STATS, /\| 4 \| 3 \| 1 day \|/);
-  assert.match(sections.ACTIVITY_OVERVIEW, /2026-01-01 to 2026-11-22 UTC/);
-  assert.match(sections.ACTIVITY_OVERVIEW, /\[example\/public-project\]\(<https:\/\/github\.com\/example\/public-project>\)/);
-  assert.match(sections.ACTIVITY_OVERVIEW, /Cached data from 2026-11-22 10:32 UTC/);
   assert.equal(sections.LAST_UPDATED, '**2026-11-21 07:15 UTC** · Last complete data update.');
   assert.equal(renderReadmeSections({ lastSuccessfulAt: '2026-11-21' }).LAST_UPDATED,
     '**2026-11-21 UTC** · Last complete data update.');

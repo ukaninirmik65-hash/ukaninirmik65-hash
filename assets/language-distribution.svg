@@ -6,18 +6,10 @@
     .surface { fill: #f6f8fc; stroke: #c4d0de; }
     .label { fill: #182e4a; font-size: 15px; font-weight: 600; }
     .value { fill: #3c526a; font-size: 15px; font-variant-numeric: tabular-nums; }
-    .grid { fill: none; stroke: #a3b3c6; }
-    .area { fill: #147445; fill-opacity: .18; stroke: #147445; stroke-width: 2; stroke-linejoin: round; }
-    .point { fill: #147445; }
-    .lang-0 { fill: #9a6b04; } .lang-1 { fill: #2369ad; } .lang-2 { fill: #7347ad; } .lang-3 { fill: #be4c36; }
     @media (prefers-color-scheme: dark) {
       .surface { fill: #111b2b; stroke: #33465c; }
       .label { fill: #eef3f9; }
       .value { fill: #b9c8da; }
-      .grid { stroke: #52657d; }
-      .area { fill: #62c88c; fill-opacity: .21; stroke: #62c88c; }
-      .point { fill: #62c88c; }
-      .lang-0 { fill: #e6c652; } .lang-1 { fill: #73a9e5; } .lang-2 { fill: #b88cf1; } .lang-3 { fill: #ed896f; }
     }
   </style>
   <rect class="surface" x=".5" y=".5" width="365" height="132" rx="10" />

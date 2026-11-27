@@ -111,28 +111,6 @@ I turn UI designs into reusable components with attention to accessibility, perf
 
 <!-- STATS:END -->
 
-## Development Activity Overview
-
-<!-- ACTIVITY_OVERVIEW:START -->
-
-**Public contributions** · 2026-01-01 to 2026-11-27 UTC
-
-<img align="right" src="assets/activity-overview.svg" width="350" alt="Contribution breakdown. Code reviews 0%, Issues 0%, Pull requests 2.88%, Commits 97.12%" />
-
-**Commits** · 101<br />**Pull requests** · 3<br />**Code reviews** · 0<br />**Issues** · 0
-
-**Recently contributed public repositories**
-
-- [ukaninirmik65-hash/nirmik-portfolio](<https://github.com/ukaninirmik65-hash/nirmik-portfolio>)
-- [DhruvilPatel121/Construction&#95;Web](<https://github.com/DhruvilPatel121/Construction_Web>)
-- [shivvilonsolutions-dev/Inventory&#95;System](<https://github.com/shivvilonsolutions-dev/Inventory_System>)
-- [ukaninirmik65-hash/atakKriya-2.O](<https://github.com/ukaninirmik65-hash/atakKriya-2.O>)
-- [ukaninirmik65-hash/ERP-App](<https://github.com/ukaninirmik65-hash/ERP-App>)
-
-<br clear="both" />
-
-<!-- ACTIVITY_OVERVIEW:END -->
-
 ## Programming Language Distribution
 
 <!-- LANGUAGES:START -->

@@ -8,13 +8,6 @@ const numeric = value => Number.isSafeInteger(value) && value >= 0 ? number.form
 const percent = value => value > 0 && value < 0.01 ? '<0.01%' : `${decimal.format(value)}%`;
 const timestamp = value => `${value.length === 10 ? value : `${value.slice(0, 10)} ${value.slice(11, 16)}`} UTC`;
 
-const activityAxes = [
-  { key: 'reviews', label: 'Code reviews', dx: 0, dy: -1, x: 175, y: 24, anchor: 'middle' },
-  { key: 'issues', label: 'Issues', dx: 1, dy: 0, x: 336, y: 121, anchor: 'end' },
-  { key: 'pullRequests', label: 'Pull requests', dx: 0, dy: 1, x: 175, y: 224, anchor: 'middle' },
-  { key: 'commits', label: 'Commits', dx: -1, dy: 0, x: 14, y: 121, anchor: 'start' },
-];
-
 const namedColors = new Map(Object.entries({
   JavaScript: ['#9a6b04', '#e6c652'],
   TypeScript: ['#2369ad', '#73a9e5'],
@@ -121,50 +114,6 @@ function statsMarkdown(stats, activity) {
   ].join('\n\n');
 }
 
-export function activityPercentages(counts) {
-  if (!counts || activityAxes.some(({ key }) => !Number.isSafeInteger(counts[key]) || counts[key] < 0)) return null;
-  const total = activityAxes.reduce((sum, { key }) => sum + counts[key], 0);
-  return Object.fromEntries(activityAxes.map(({ key }) => [key, total ? counts[key] / total * 100 : 0]));
-}
-
-const radarCenter = { x: 175, y: 130 };
-const radarRadius = 73;
-
-export function radarPoints(percentages) {
-  return activityAxes.map(({ key, dx, dy }) => ({
-    x: radarCenter.x + dx * radarRadius * percentages[key] / 100,
-    y: radarCenter.y + dy * radarRadius * percentages[key] / 100,
-  }));
-}
-
-function activitySummary(counts) {
-  const percentages = activityPercentages(counts);
-  if (!percentages) return 'Contribution counts are unavailable.';
-  if (Object.values(percentages).every(value => value === 0)) return 'GitHub reported no contributions in these four categories.';
-  return activityAxes.map(({ key, label }) => `${label} ${percent(percentages[key])}`).join(', ');
-}
-
-function activityMarkdown(section) {
-  const activity = section?.data;
-  const counts = activity?.counts;
-  const repositories = activity?.repositories?.map(({ name, url }) => repositoryLink(name, url));
-  const links = repositories == null ? 'Repository data is unavailable.'
-    : repositories.length ? repositories.map(link => `- ${link}`).join('\n')
-      : 'No recently contributed public repositories were reported.';
-  return [
-    `**Public contributions** · ${period(activity)}${staleNotice(section)}`,
-    `<img align="right" src="assets/activity-overview.svg" width="350" alt="${xml(`Contribution breakdown. ${activitySummary(counts)}`)}" />`,
-    [
-      `**Commits** · ${numeric(counts?.commits)}`,
-      `**Pull requests** · ${numeric(counts?.pullRequests)}`,
-      `**Code reviews** · ${numeric(counts?.reviews)}`,
-      `**Issues** · ${numeric(counts?.issues)}`,
-    ].join('<br />'),
-    `**Recently contributed public repositories**\n\n${links}`,
-    '<br clear="both" />',
-  ].join('\n\n');
-}
-
 function languagesMarkdown(section) {
   const distribution = section?.data;
   if (!distribution) return 'Language data is unavailable.';
@@ -189,7 +138,6 @@ export function renderReadmeSections(model) {
   return {
     PROJECTS: projectsMarkdown(model.projects),
     STATS: statsMarkdown(model.stats, model.activity),
-    ACTIVITY_OVERVIEW: activityMarkdown(model.activity),
     LANGUAGES: languagesMarkdown(model.languages),
     RECENT_ACTIVITY: recentMarkdown(model.recent),
     LAST_UPDATED: model.lastSuccessfulAt
@@ -207,16 +155,10 @@ function svg(width, height, title, description, body, { styles = '', darkStyles 
     .surface { fill: #f6f8fc; stroke: #c4d0de; }
     .label { fill: #182e4a; font-size: 15px; font-weight: 600; }
     .value { fill: #3c526a; font-size: 15px; font-variant-numeric: tabular-nums; }
-    .grid { fill: none; stroke: #a3b3c6; }
-    .area { fill: #147445; fill-opacity: .18; stroke: #147445; stroke-width: 2; stroke-linejoin: round; }
-    .point { fill: #147445; }${styles ? `\n    ${styles}` : ''}
     @media (prefers-color-scheme: dark) {
       .surface { fill: #111b2b; stroke: #33465c; }
       .label { fill: #eef3f9; }
       .value { fill: #b9c8da; }
-      .grid { stroke: #52657d; }
-      .area { fill: #62c88c; fill-opacity: .21; stroke: #62c88c; }
-      .point { fill: #62c88c; }${darkStyles ? `\n      ${darkStyles}` : ''}
     }
   </style>
   <rect class="surface" x=".5" y=".5" width="${width - 1}" height="${height - 1}" rx="10" />
@@ -227,37 +169,6 @@ ${body}
 
 function chartText(x, y, value, style, alignment = 'start') {
   return `<text class="${style}" x="${x}" y="${y}" text-anchor="${alignment}">${xml(value)}</text>`;
-}
-
-function renderActivity(activity) {
-  const title = 'Development activity breakdown';
-  const summary = activitySummary(activity?.counts);
-  const percentages = activityPercentages(activity?.counts);
-  if (!percentages || Object.values(percentages).every(value => value === 0)) {
-    const text = percentages ? 'No contributions in this period' : 'Contribution counts unavailable';
-    return svg(350, 88, title, summary, `  ${chartText(175, 49, text, 'label', 'middle')}`);
-  }
-
-  const pointsString = points => points.map(({ x, y }) => `${x.toFixed(3)},${y.toFixed(3)}`).join(' ');
-  const rings = [25, 50, 75, 100].map(level => {
-    const values = Object.fromEntries(activityAxes.map(({ key }) => [key, level]));
-    return `  <polygon class="grid" points="${pointsString(radarPoints(values))}" />`;
-  });
-  const points = radarPoints(percentages);
-  const { x, y } = radarCenter;
-  const details = [
-    ...rings,
-    `  <path class="grid" d="M${x - radarRadius} ${y}H${x + radarRadius} M${x} ${y - radarRadius}V${y + radarRadius}" />`,
-    `  <polygon class="area" points="${pointsString(points)}" />`,
-    ...points.flatMap((point, index) => percentages[activityAxes[index].key] > 0
-      ? [`  <circle class="point" cx="${point.x.toFixed(3)}" cy="${point.y.toFixed(3)}" r="3.5" />`]
-      : []),
-    ...activityAxes.flatMap(axis => [
-      `  ${chartText(axis.x, axis.y, axis.label, 'label', axis.anchor)}`,
-      `  ${chartText(axis.x, axis.y + 19, percent(percentages[axis.key]), 'value', axis.anchor)}`,
-    ]),
-  ];
-  return svg(350, 258, title, summary, details.join('\n'));
 }
 
 function languageColor(name) {
@@ -307,7 +218,6 @@ function renderLanguages(distribution) {
 
 export function renderAssets(model) {
   return {
-    'activity-overview.svg': renderActivity(model.activity?.data),
     'language-distribution.svg': renderLanguages(model.languages?.data),
   };
 }

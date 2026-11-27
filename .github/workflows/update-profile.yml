@@ -106,7 +106,6 @@ jobs:
           git add -- \
             README.md \
             assets/profile-data.json \
-            assets/activity-overview.svg \
             assets/language-distribution.svg
           if git diff --cached --quiet; then
             echo "Public data is unchanged; no commit needed."
