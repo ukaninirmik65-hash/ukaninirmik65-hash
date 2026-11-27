@@ -25,7 +25,12 @@ function migrateSnapshot(previous, username) {
   const empty = { version: 2, username, lastSuccessfulAt: null,
     ...Object.fromEntries(sectionNames.map(name => [name, emptySection()])) };
   if (!previous || previous.username?.toLowerCase() !== username.toLowerCase()) return empty;
-  if (previous.version === 2) return { recentRepositories: emptySection(), ...previous };
+  if (previous.version === 2) {
+    const activity = previous.activity;
+    if (!activity?.data || !Object.hasOwn(activity.data, 'days')) return { recentRepositories: emptySection(), ...previous };
+    const { days, ...summary } = activity.data;
+    return { recentRepositories: emptySection(), ...previous, activity: { ...activity, data: summary } };
+  }
   if (previous.version !== 1) throw new Error('Unsupported profile snapshot version');
   const stats = { repositories: previous.totals?.total, stars: previous.totals?.stars, followers: previous.followers };
   if (Object.values(stats).every(integer) && isoDate(previous.observedAt)) {
@@ -193,7 +198,8 @@ export async function updateProfile({
       const cached = prior?.previousYear?.from === comparison.from && prior.previousYear.to === comparison.to
         ? prior.previousYear : null;
       const history = data.previousYear ?? cached;
-      return { ...data, previousYear: history,
+      const { days, ...summary } = data;
+      return { ...summary, previousYear: history,
         previousYearObservedAt: history && (same(history, cached) ? prior?.previousYearObservedAt || instant : instant),
         previousYearStale: !data.previousYear && !!cached,
       };

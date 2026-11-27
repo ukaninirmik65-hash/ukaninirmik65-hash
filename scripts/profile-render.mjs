@@ -1,4 +1,4 @@
-import { contributionsMarkdown, dashboardMarkdown, renderContributions, renderDashboard } from './profile-analytics-render.mjs';
+import { dashboardMarkdown, renderDashboard } from './profile-analytics-render.mjs';
 
 const number = new Intl.NumberFormat('en-US');
 const decimal = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
@@ -121,7 +121,6 @@ export function renderReadmeSections(model) {
   return {
     PROJECTS: projectsMarkdown(model.projects),
     STATS: dashboardMarkdown(model.stats, model.activity, model.languages),
-    CONTRIBUTIONS: contributionsMarkdown(model.activity),
     LANGUAGES: languagesMarkdown(model.languages),
     RECENT_ACTIVITY: recentMarkdown(model.recent, model.recentRepositories),
     LAST_UPDATED: model.lastSuccessfulAt
@@ -203,7 +202,6 @@ function renderLanguages(distribution) {
 export function renderAssets(model) {
   return {
     'github-statistics.svg': renderDashboard(model),
-    'contribution-analytics.svg': renderContributions(model),
     'language-distribution.svg': renderLanguages(model.languages?.data),
   };
 }
