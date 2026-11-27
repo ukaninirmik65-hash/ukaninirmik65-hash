@@ -4,15 +4,15 @@ import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import {
   currentStreak, dateKey, fetchActivity, fetchAllPages, fetchInventory, fetchLanguages,
-  integer, publicRequest, requestGitHub, validateCalendar,
+  integer, previousYearPeriod, publicRequest, requestGitHub, validateCalendar,
 } from './profile-data.mjs';
-import { fetchProjects, fetchRecentActivity } from './profile-content.mjs';
+import { fetchProjects, fetchRecentActivity, getRecentlyUpdatedProjects } from './profile-content.mjs';
 import { renderAssets, renderReadmeSections } from './profile-render.mjs';
 
 const DEFAULT_USER = 'ukaninirmik65-hash';
 const DEFAULT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const snapshotPath = 'assets/profile-data.json';
-const sectionNames = ['projects', 'stats', 'activity', 'languages', 'recent'];
+const sectionNames = ['projects', 'stats', 'activity', 'languages', 'recent', 'recentRepositories'];
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const normalizedText = value => value?.replaceAll('\r\n', '\n');
 const isoDate = value => typeof value === 'string' && Number.isFinite(Date.parse(value))
@@ -25,7 +25,7 @@ function migrateSnapshot(previous, username) {
   const empty = { version: 2, username, lastSuccessfulAt: null,
     ...Object.fromEntries(sectionNames.map(name => [name, emptySection()])) };
   if (!previous || previous.username?.toLowerCase() !== username.toLowerCase()) return empty;
-  if (previous.version === 2) return previous;
+  if (previous.version === 2) return { recentRepositories: emptySection(), ...previous };
   if (previous.version !== 1) throw new Error('Unsupported profile snapshot version');
   const stats = { repositories: previous.totals?.total, stars: previous.totals?.stars, followers: previous.followers };
   if (Object.values(stats).every(integer) && isoDate(previous.observedAt)) {
@@ -182,17 +182,29 @@ export async function updateProfile({
     }
   }
 
-  const [projects, stats, fetchedActivity, languages, recent] = await Promise.all([
+  const [projects, stats, fetchedActivity, languages, recent, recentRepositories] = await Promise.all([
     section('projects', async () => fetchProjects({ username, repositories: (await inventory).repositories, request: get,
       fetchImpl, previousProjects: previous.projects.data || [], onWarning })),
     section('stats', async () => (await inventory).stats),
-    section('activity', () => fetchActivity({ username, period, now: instant, tokens, request: graph })),
+    section('activity', async () => {
+      const data = await fetchActivity({ username, period, now: instant, tokens, request: graph, onWarning });
+      const prior = previous.activity.data;
+      const comparison = previousYearPeriod(period);
+      const cached = prior?.previousYear?.from === comparison.from && prior.previousYear.to === comparison.to
+        ? prior.previousYear : null;
+      const history = data.previousYear ?? cached;
+      return { ...data, previousYear: history,
+        previousYearObservedAt: history && (same(history, cached) ? prior?.previousYearObservedAt || instant : instant),
+        previousYearStale: !data.previousYear && !!cached,
+      };
+    }),
     section('languages', async () => fetchLanguages(username, (await inventory).repositories, get)),
     section('recent', async () => fetchRecentActivity({ username, repositories: (await inventory).repositories,
       request: get, fetchAllPages, now: instant })),
+    section('recentRepositories', async () => getRecentlyUpdatedProjects({ username, repositories: (await inventory).repositories })),
   ]);
   const activity = stored?.version === 1 && fetchedActivity.stale ? legacyRepositoryLinks(previous, recent, today) : fetchedActivity;
-  const model = { version: 2, username, lastSuccessfulAt: previous.lastSuccessfulAt, projects, stats, activity, languages, recent };
+  const model = { version: 2, username, lastSuccessfulAt: previous.lastSuccessfulAt, projects, stats, activity, languages, recent, recentRepositories };
   if (!failed.length && (!model.lastSuccessfulAt || sectionNames.some(name => !same(model[name], previous[name])))) {
     model.lastSuccessfulAt = instant;
   }

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fetchProjects, fetchRecentActivity } from '../scripts/profile-content.mjs';
+import { fetchProjects, fetchRecentActivity, getRecentlyUpdatedProjects } from '../scripts/profile-content.mjs';
 
 const OWNER = 'ukaninirmik65-hash';
 const NOW = '2026-11-27T20:00:00Z';
@@ -9,6 +9,7 @@ const hash = 'a'.repeat(40);
 const verified = 'https://erp-app-khaki.vercel.app/';
 const json = value => Response.json(value);
 const html = () => new Response('<h1>Demo</h1>', { headers: { 'content-type': 'text/html; charset=utf-8' } });
+const manifest = value => json({ type: 'file', encoding: 'base64', content: Buffer.from(JSON.stringify(value)).toString('base64') });
 
 function repository(name, extra = {}) {
   return { name, description: 'A repository description', language: 'JavaScript', stars: 0, forks: 0, pushedAt: '2026-11-25', ...extra };
@@ -24,13 +25,14 @@ function event(type, payload, extra = {}) {
 
 test('featured projects preserve curation and discover qualifying repositories while excluding irrelevant ones', async () => {
   const repositories = [
-    repository('ERP-App', { forks: 2, homepage: 'https://invalid.example/' }),
+    repository('ERP-App', { forks: 2, homepage: 'https://invalid.example/', license: 'MIT', pushedAt: '2026-11-26' }),
     repository('Tetris-Game', { stars: 1 }),
     repository('NewProject', { topics: ['featured'] }),
     repository('StarredProject', { stars: 2 }),
     repository('draft'),
     repository('forked', { fork: true, stars: 9 }),
     repository('archived', { archived: true, stars: 9 }),
+    repository('disabled', { disabled: true, stars: 9 }),
     repository('private', { private: true, stars: 9 }),
     repository(OWNER, { stars: 9 }),
     repository('motiwalaperfumes-clone', { stars: 9 }),
@@ -39,16 +41,60 @@ test('featured projects preserve curation and discover qualifying repositories w
   const probes = [];
   const result = await fetchProjects({
     username: OWNER, repositories,
-    request: async () => json([commit({ title: 'chore: refresh public profile activity', sha: 'b'.repeat(40) }), commit()]),
+    request: async url => {
+      if (url.includes('/StarredProject/contents/package.json')) {
+        return manifest({ dependencies: { react: '^19.0.0', 'react-router': '^7.0.0', 'react-router-dom': '^7.0.0', 'unrecognized-package': '1.0.0' },
+          devDependencies: { vite: '^7.0.0' }, scripts: { build: 'next build' } });
+      }
+      if (url.endsWith('/contents/package.json')) throw Object.assign(new Error('Not found'), { status: 404 });
+      return json([commit({ title: 'chore: refresh public profile activity', sha: 'b'.repeat(40) }), commit()]);
+    },
     fetchImpl: async (url, options) => { probes.push(url); assert.equal(options.redirect, 'manual'); assert.equal(options.headers, undefined); return html(); },
   });
   assert.deepEqual(result.map(item => item.name), ['ERP-App', 'Tetris-Game', 'StarredProject', 'NewProject']);
   assert.equal(result[0].title, 'ERP Management Frontend');
   assert.equal(result[0].updatedAt, '2026-11-25');
+  assert.equal(result[0].pushedAt, '2026-11-26');
+  assert.equal(result[0].githubDescription, 'A repository description');
+  assert.equal(result[0].license, 'MIT');
   assert.equal(result[0].forks, 2);
   assert.equal(result[0].demoUrl, verified);
-  assert.deepEqual(result[2].stack, ['JavaScript']);
+  assert.ok(result[0].features.includes('Inventory views and chart-based reporting'));
+  assert.deepEqual(result[2].stack, ['React.js', 'React Router', 'Vite']);
+  assert.deepEqual(result[2].features, []);
+  assert.equal(result[2].githubDescription, null);
+  assert.equal(result[2].license, null);
+  assert.deepEqual(result[3].stack, []);
   assert.equal(probes.length, 2);
+});
+
+test('discovered project manifest requests distinguish an unavailable API from unsupported source', async () => {
+  const config = { username: OWNER, repositories: [repository('Discovered', { topics: ['featured'] })] };
+  const [project] = await fetchProjects({ ...config, request: async url => {
+    return url.endsWith('/contents/package.json') ? json({ type: 'dir' }) : json([]);
+  } });
+  assert.deepEqual(project.stack, []);
+  await assert.rejects(fetchProjects({ ...config, request: async url => {
+    if (url.endsWith('/contents/package.json')) throw Object.assign(new Error('Temporarily unavailable'), { status: 503 });
+    return json([]);
+  } }), /Temporarily unavailable/);
+});
+
+test('recently updated projects use UTC push dates and exclude profile automation and ineligible repositories', () => {
+  const repositories = [
+    repository('First', { pushedAtInstant: '2026-11-26T22:30:00-03:00' }),
+    repository('Second', { pushedAtInstant: '2026-11-27T01:00:00Z' }),
+    repository('NoTimestamp', { pushedAt: 'broken-date' }),
+    repository('Third'), repository('Fourth', { pushedAt: '2026-11-24' }),
+    repository('Fifth', { pushedAt: '2026-11-23' }), repository('Sixth', { pushedAt: '2026-11-22' }),
+    repository(OWNER, { pushedAt: '2026-11-29' }), repository('Fork', { pushedAt: '2026-11-29', fork: true }),
+    repository('Archived', { pushedAt: '2026-11-29', archived: true }), repository('Disabled', { pushedAt: '2026-11-29', disabled: true }),
+    repository('Private', { pushedAt: '2026-11-29', private: true }),
+  ];
+  const rows = getRecentlyUpdatedProjects({ username: OWNER, repositories });
+  assert.deepEqual(rows.map(row => row.name), ['First', 'Second', 'Third', 'Fourth', 'Fifth']);
+  assert.deepEqual(rows[0], { name: 'First', url: `https://github.com/${OWNER}/First`, updatedAt: '2026-11-27' });
+  assert.deepEqual(getRecentlyUpdatedProjects({ username: OWNER, repositories: [] }), []);
 });
 
 test('deployment probes retain previous verified URLs for temporary failures and omit dead links', async () => {

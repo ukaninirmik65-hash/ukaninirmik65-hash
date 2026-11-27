@@ -1,3 +1,5 @@
+import { contributionsMarkdown, dashboardMarkdown, renderContributions, renderDashboard } from './profile-analytics-render.mjs';
+
 const number = new Intl.NumberFormat('en-US');
 const decimal = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 const prohibitedText = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069\ufffe\uffff\uD800-\uDFFF]/gu;
@@ -46,12 +48,6 @@ function staleNotice(section) {
     : '';
 }
 
-function period(activity) {
-  return activity?.from && activity.to
-    ? `${markdown(activity.from)} to ${markdown(activity.to)} UTC`
-    : 'Current calendar year (UTC)';
-}
-
 function projectCard(project) {
   const source = linkUrl(project.url, true);
   const demo = linkUrl(project.demoUrl);
@@ -62,16 +58,20 @@ function projectCard(project) {
   const details = [
     project.language && xml(project.language),
     Number.isSafeInteger(project.stars) && `${numeric(project.stars)} ${project.stars === 1 ? 'star' : 'stars'}`,
-    project.forks > 0 && `${numeric(project.forks)} ${project.forks === 1 ? 'fork' : 'forks'}`,
+    Number.isSafeInteger(project.forks) && `${numeric(project.forks)} ${project.forks === 1 ? 'fork' : 'forks'}`,
+    project.license && xml(project.license),
   ].filter(Boolean).join(' · ');
   const stack = (project.stack ?? []).map(item => `<code>${xml(item)}</code>`).join(' ');
   return [
     '    <td width="50%" valign="top">',
     `      <h3>${xml(project.title || project.name)}</h3>`,
     project.description && `      <p>${xml(project.description)}</p>`,
+    project.githubDescription && `      <p>Repository description · ${xml(project.githubDescription)}</p>`,
+    project.features?.length && `      <p>${project.features.map(xml).join(' · ')}</p>`,
     stack && `      <p>${stack}</p>`,
     details && `      <p>${details}</p>`,
-    project.updatedAt && `      <p>Code updated ${xml(project.updatedAt)}</p>`,
+    project.pushedAt && `      <p>Last pushed ${xml(project.pushedAt)} UTC</p>`,
+    project.updatedAt && project.updatedAt !== project.pushedAt && `      <p>Code updated ${xml(project.updatedAt)} UTC</p>`,
     `      <p>${links.join(' · ')}</p>`,
     '    </td>',
   ].filter(Boolean).join('\n');
@@ -91,55 +91,39 @@ function projectsMarkdown(section) {
   return `<table>\n${rows.join('\n')}\n</table>${staleNotice(section)}`;
 }
 
-function statsMarkdown(stats, activity) {
-  const account = stats?.data;
-  const overview = activity?.data;
-  const counts = overview?.counts;
-  const streak = overview?.streak;
-
-  const accountRows = account ? [
-    '| Repos | Stars | Followers |',
-    '| ---: | ---: | ---: |',
-    `| ${numeric(account.repositories)} | ${numeric(account.stars)} | ${numeric(account.followers)} |`,
-  ].join('\n') : 'Public account metrics are unavailable.';
-  const contributionRows = [
-    '| Commits | PRs | Profile streak |',
-    '| ---: | ---: | ---: |',
-    `| ${numeric(counts?.commits)} | ${numeric(counts?.pullRequests)} | ${streak == null ? 'Unavailable' : `${numeric(streak)} ${streak === 1 ? 'day' : 'days'}`} |`,
-  ].join('\n');
-
-  return [
-    `**Public account totals**\n\n${accountRows}${staleNotice(stats)}`,
-    `**Public contributions** · ${period(overview)}\n\n${contributionRows}${staleNotice(activity)}`,
-  ].join('\n\n');
-}
-
 function languagesMarkdown(section) {
   const distribution = section?.data;
   if (!distribution) return 'Language data is unavailable.';
   if (!distribution.length) return 'GitHub reported no language bytes for eligible repositories.';
   const legend = distribution.map(({ name, percentage }) => `${displayText(name)} ${percent(percentage)}`).join(', ');
+  const rows = distribution.map(({ name, bytes, percentage, repositories }) =>
+    `- **${markdown(name)}** · ${numeric(bytes)} bytes · ${percent(percentage)} · ${numeric(repositories)} ${repositories === 1 ? 'repository' : 'repositories'}`);
   return [
     `<img src="assets/language-distribution.svg" width="366" alt="${xml(`Share of repository language bytes. ${legend}`)}" />`,
+    rows.join('\n'),
     `Based on language bytes in eligible public repositories. [Repository exclusions](docs/SETUP.md#language-distribution)${staleNotice(section)}`,
   ].join('\n\n');
 }
 
-function recentMarkdown(section) {
+function recentMarkdown(section, repositories) {
+  const updates = repositories?.data;
+  const latest = updates?.length ? '**Recently pushed repositories**\n\n' + updates.map(({ name, url, updatedAt }) =>
+    `- ${repositoryLink(name, url)} · ${markdown(updatedAt)} UTC`).join('\n') + staleNotice(repositories) : '';
   const activity = section?.data;
-  if (!activity) return 'Recent public activity is unavailable.';
-  if (!activity.length) return `No recent public development activity was reported.${staleNotice(section)}`;
-  const entries = activity.map(({ kind, title, repo, date, url }) =>
+  const entries = activity?.map(({ kind, title, repo, date, url }) =>
     `- ${repositoryLink(title, url)} · ${markdown(kind)} · ${markdown(repo)} · ${markdown(date)}`);
-  return `${entries.join('\n')}${staleNotice(section)}`;
+  const feed = entries?.length ? entries.join('\n')
+    : activity ? 'No recent public development activity was reported.' : 'Recent public activity is unavailable.';
+  return [latest, latest && '**Recent public events**', feed + staleNotice(section)].filter(Boolean).join('\n\n');
 }
 
 export function renderReadmeSections(model) {
   return {
     PROJECTS: projectsMarkdown(model.projects),
-    STATS: statsMarkdown(model.stats, model.activity),
+    STATS: dashboardMarkdown(model.stats, model.activity, model.languages),
+    CONTRIBUTIONS: contributionsMarkdown(model.activity),
     LANGUAGES: languagesMarkdown(model.languages),
-    RECENT_ACTIVITY: recentMarkdown(model.recent),
+    RECENT_ACTIVITY: recentMarkdown(model.recent, model.recentRepositories),
     LAST_UPDATED: model.lastSuccessfulAt
       ? `**${timestamp(model.lastSuccessfulAt)}** · Last complete data update.`
       : 'A complete refresh timestamp is unavailable.',
@@ -154,11 +138,11 @@ function svg(width, height, title, description, body, { styles = '', darkStyles 
     :root { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
     .surface { fill: #f6f8fc; stroke: #c4d0de; }
     .label { fill: #182e4a; font-size: 15px; font-weight: 600; }
-    .value { fill: #3c526a; font-size: 15px; font-variant-numeric: tabular-nums; }
+    .value { fill: #3c526a; font-size: 15px; font-variant-numeric: tabular-nums; }${styles ? `\n    ${styles}` : ''}
     @media (prefers-color-scheme: dark) {
       .surface { fill: #111b2b; stroke: #33465c; }
       .label { fill: #eef3f9; }
-      .value { fill: #b9c8da; }
+      .value { fill: #b9c8da; }${darkStyles ? `\n      ${darkStyles}` : ''}
     }
   </style>
   <rect class="surface" x=".5" y=".5" width="${width - 1}" height="${height - 1}" rx="10" />
@@ -218,6 +202,8 @@ function renderLanguages(distribution) {
 
 export function renderAssets(model) {
   return {
+    'github-statistics.svg': renderDashboard(model),
+    'contribution-analytics.svg': renderContributions(model),
     'language-distribution.svg': renderLanguages(model.languages?.data),
   };
 }
