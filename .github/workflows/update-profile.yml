@@ -107,7 +107,6 @@ jobs:
             README.md \
             assets/profile-data.json \
             assets/github-statistics.svg \
-            assets/contribution-analytics.svg \
             assets/language-distribution.svg
           if git diff --cached --quiet; then
             echo "Public data is unchanged; no commit needed."

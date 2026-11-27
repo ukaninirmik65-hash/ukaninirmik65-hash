@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="366" height="448" viewBox="0 0 366 448" role="img" aria-labelledby="title description">
   <title id="title">GitHub statistics dashboard</title>
-  <desc id="description">2026-01-01 to 2026-11-27 UTC. Public repos: 9. Original repos: 9. Stars received: 1. Forks received: 0. Followers: 6. Following: 3. Contributions: 146. Pull requests: 4. Issues: 1. Current streak: 2 days. Longest streak: 4 days. Active days: 34. Latest repository push: nirmik-portfolio · 2026-11-26. Top language by bytes: JavaScript. Last complete refresh: 2026-11-27 14:07 UTC</desc>
+  <desc id="description">2026-01-01 to 2026-11-27 UTC. Public repos: 9. Original repos: 9. Stars received: 1. Forks received: 0. Followers: 6. Following: 3. Contributions: 149. Pull requests: 5. Issues: 1. Current streak: 2 days. Longest streak: 4 days. Active days: 34. Latest repository push: nirmik-portfolio · 2026-11-26. Top language by bytes: JavaScript. Last complete refresh: 2026-11-27 14:16 UTC</desc>
   <style>
     :root { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
     .surface { fill: #f7f9ff; stroke: #bac7de; }
@@ -11,11 +11,6 @@
     .small { fill: #425971; font-size: 10px; }
     .value { fill: #182d4d; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
     .axis { stroke: #b0bfd5; stroke-width: 1; }
-    .track, .level-0 { fill: #dfe7f5; }
-    .teal, .level-3 { fill: #1b788f; }
-    .purple, .level-4 { fill: #6046a6; }
-    .level-1 { fill: #9ad6dd; }
-    .level-2 { fill: #51abbc; }
     @media (prefers-color-scheme: dark) {
       .surface { fill: #111a2c; stroke: #384a67; }
       .tile { fill: #1c2940; }
@@ -23,11 +18,6 @@
       .label { fill: #dce7fb; }
       .muted, .small { fill: #acbed8; }
       .axis { stroke: #526684; }
-      .track, .level-0 { fill: #263854; }
-      .teal, .level-3 { fill: #60c3d3; }
-      .purple, .level-4 { fill: #ad9bf5; }
-      .level-1 { fill: #385d75; }
-      .level-2 { fill: #428a9e; }
     }
   </style>
   <rect class="surface" x="0.5" y="0.5" width="365" height="447" rx="14" />
@@ -55,10 +45,10 @@
   <text class="value" x="251" y="157" text-anchor="start">3</text>
   <rect class="tile" x="15" y="222" width="108" height="49" rx="8" />
   <text class="small" x="23" y="240" text-anchor="start">Contributions</text>
-  <text class="value" x="23" y="261" text-anchor="start">146</text>
+  <text class="value" x="23" y="261" text-anchor="start">149</text>
   <rect class="tile" x="129" y="222" width="108" height="49" rx="8" />
   <text class="small" x="137" y="240" text-anchor="start">Pull requests</text>
-  <text class="value" x="137" y="261" text-anchor="start">4</text>
+  <text class="value" x="137" y="261" text-anchor="start">5</text>
   <rect class="tile" x="243" y="222" width="108" height="49" rx="8" />
   <text class="small" x="251" y="240" text-anchor="start">Issues</text>
   <text class="value" x="251" y="261" text-anchor="start">1</text>
@@ -76,5 +66,5 @@
   <text class="label" x="16" y="364" text-anchor="start">nirmik-portfolio</text>
   <text class="small" x="16" y="387" text-anchor="start">Top language by repository bytes</text>
   <text class="label" x="16" y="405" text-anchor="start">JavaScript</text>
-  <text class="small" x="16" y="433" text-anchor="start">Last complete refresh · 2026-11-27 14:07 UTC</text>
+  <text class="small" x="16" y="433" text-anchor="start">Last complete refresh · 2026-11-27 14:16 UTC</text>
 </svg>

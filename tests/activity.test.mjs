@@ -17,7 +17,7 @@ const INSTANT = '2026-01-03T09:00:00.000Z';
 const LATER = '2026-01-03T15:00:00.000Z';
 const TOKEN = 'unit-test-credential-that-must-not-appear';
 const SHA = '2'.repeat(40);
-const sections = ['PROJECTS', 'STATS', 'CONTRIBUTIONS', 'LANGUAGES', 'RECENT_ACTIVITY', 'LAST_UPDATED'];
+const sections = ['PROJECTS', 'STATS', 'LANGUAGES', 'RECENT_ACTIVITY', 'LAST_UPDATED'];
 const readme = ['# My developer profile', ...sections.map(name => `<!-- ${name}:START -->\nOriginal ${name} text\n<!-- ${name}:END -->`), 'Manual footer', ''].join('\n\n');
 const json = (value, options) => Response.json(value, options);
 
